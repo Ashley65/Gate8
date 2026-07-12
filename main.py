@@ -5,7 +5,8 @@ import httpx
 from typing import List
 
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 try:
@@ -18,9 +19,18 @@ else:
 
 docker_not_found_error = getattr(getattr(docker, "errors", None), "NotFound", Exception)
 
-app = FastAPI(title="Resource Gateway")
-docker_client = None
+app = FastAPI(title="Gate8 Resource Gateway")
 
+# Enable CORS so web interfaces can communicate with the API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+docker_client = None
 if docker is not None:
     try:
         docker_client = docker.from_env()
@@ -48,13 +58,13 @@ class SpeechRequest(BaseModel):
 def _docker_unavailable_detail() -> str:
     if docker_import_error is None:
         return "Docker is unavailable: No Docker SDK found and 'docker' CLI command failed."
-    
+
     error_str = str(docker_import_error)
     detail = f"Docker is unavailable: {error_str}"
-    
+
     if "distutils" in error_str.lower():
         detail += " (Note: Python 3.12+ requires 'pip install setuptools' for the Docker SDK to work)."
-    
+
     return detail
 
 
@@ -62,7 +72,7 @@ def _run_docker_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
     """Helper to run raw Docker CLI commands if the SDK fails."""
     # Try common paths for Docker, especially useful on macOS or if PATH is restricted
     paths_to_try = ["docker", "/usr/local/bin/docker", "/usr/bin/docker", "/opt/homebrew/bin/docker"]
-    
+
     last_error = None
     for path in paths_to_try:
         try:
@@ -70,7 +80,7 @@ def _run_docker_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
         except FileNotFoundError as e:
             last_error = e
             continue
-            
+
     if last_error:
         raise last_error
     raise FileNotFoundError("docker command not found")
@@ -190,7 +200,6 @@ def safely_pause_tts():
 
 async def safely_unload_llm():
     """Tells LM Studio to eject loaded models from memory."""
-    # LM Studio's model management APIs differ based on version
     api_v1_url = LM_STUDIO_URL.replace("/v1", "/api/v1")
     api_v0_url = LM_STUDIO_URL.replace("/v1", "/api/v0")
 
@@ -202,19 +211,17 @@ async def safely_unload_llm():
             v1_resp = await client.get(f"{api_v1_url}/models")
             if v1_resp.status_code == 200:
                 v1_data = v1_resp.json()
-                # v1 uses "models" key and "loaded_instances" to indicate active models
                 models_list = v1_data.get("models", [])
                 for m in models_list:
                     for instance in m.get("loaded_instances", []):
                         if instance.get("id"):
                             loaded_instances.append(instance["id"])
-            
+
             # 2. Try /api/v0/models if v1 didn't yield anything or failed
             if not loaded_instances:
                 v0_resp = await client.get(f"{api_v0_url}/models")
                 if v0_resp.status_code == 200:
                     v0_data = v0_resp.json()
-                    # v0 uses "data" key and "state" field
                     models_list = v0_data.get("data", [])
                     loaded_instances = [m["id"] for m in models_list if m.get("state") == "loaded"]
 
@@ -229,29 +236,15 @@ async def safely_unload_llm():
                 print("[Orchestrator] No LLMs are currently loaded.")
                 return
 
-            # 2. Unload each instance safely
+            # Unload each instance safely
             for instance_id in loaded_instances:
                 print(f"[Orchestrator] Ejecting LLM instance: {instance_id}")
 
-                # Try v1 unload first
-                unload_resp = await client.post(
-                    f"{api_v1_url}/models/unload",
-                    json={"instance_id": instance_id}
-                )
-
-                # Fallback to "model" key if "instance_id" fails
+                unload_resp = await client.post(f"{api_v1_url}/models/unload", json={"instance_id": instance_id})
                 if unload_resp.status_code != 200:
-                    unload_resp = await client.post(
-                        f"{api_v1_url}/models/unload",
-                        json={"model": instance_id}
-                    )
-                
-                # Try v0 unload if v1 failed
+                    unload_resp = await client.post(f"{api_v1_url}/models/unload", json={"model": instance_id})
                 if unload_resp.status_code != 200:
-                    unload_resp = await client.post(
-                        f"{api_v0_url}/models/unload",
-                        json={"model": instance_id}
-                    )
+                    unload_resp = await client.post(f"{api_v0_url}/models/unload", json={"model": instance_id})
 
                 if unload_resp.status_code == 200:
                     print(f"[Orchestrator] Successfully unloaded {instance_id}")
@@ -269,29 +262,44 @@ async def get_lm_studio_models() -> List[str]:
             response = await client.get(f"{LM_STUDIO_URL}/models")
             if response.status_code == 200:
                 data = response.json()
-                # Extract just the model IDs from the OpenAI-formatted response
                 return [model["id"] for model in data.get("data", [])]
             return []
         except Exception:
             return []
 
 
+# ---------------------------------------------------------
+# Serve the Frontend Web UIs
+# ---------------------------------------------------------
+@app.get("/")
+async def serve_chat_assistant():
+    """Serves the index.html file (Chat Assistant)."""
+    file_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return JSONResponse(status_code=404, content={"message": "index.html not found."})
+
+
+@app.get("/reader")
+async def serve_novel_reader():
+    """Serves the WebNovelReader.html file."""
+    file_path = os.path.join(os.path.dirname(__file__), "WebNovelReader.html")
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return JSONResponse(status_code=404, content={"message": "WebNovelReader.html not found."})
+
+
 @app.post("/v1/chat/completions")
 async def handle_chat(payload: ChatRequest):
-    # 1. Enforce the 8GB RAM limit by pausing TTS first
+    # Enforce the 8GB RAM limit by pausing TTS first
     safely_pause_tts()
 
-    # 2. Handle missing or "default" model selection
+    # Handle missing or "default" model selection
     if not payload.model or payload.model.lower() == "default":
         available_models = await get_lm_studio_models()
-
         if not available_models:
-            raise HTTPException(
-                status_code=503,
-                detail="No models are currently available or downloaded in LM Studio."
-            )
+            raise HTTPException(status_code=503, detail="No models are currently available or downloaded in LM Studio.")
 
-        # Return a 400 Bad Request with the list of models, prompting the user/client to pick one.
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -301,7 +309,7 @@ async def handle_chat(payload: ChatRequest):
             }
         )
 
-    # 3. Forward the request to LM Studio
+    # Forward the request to LM Studio
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
             print(f"[Orchestrator] Routing chat request to LM Studio (Model: {payload.model})...")
@@ -310,7 +318,6 @@ async def handle_chat(payload: ChatRequest):
                 json=payload.model_dump()
             )
 
-            # If LM Studio throws an error (like model not found), pass it back to the client
             if response.status_code != 200:
                 raise HTTPException(status_code=response.status_code, detail=response.json())
 
@@ -321,52 +328,43 @@ async def handle_chat(payload: ChatRequest):
 
 @app.post("/v1/audio/speech")
 async def handle_speech(payload: SpeechRequest):
-    # 1. Enforce the 8GB RAM limit by unloading the LLM first
+    # Enforce the 8GB RAM limit by unloading the LLM first
     await safely_unload_llm()
 
     try:
-        # 2. Spin up TTS Container
         print("[Orchestrator] Spinning up TTS Container...")
         _ensure_tts_container_running()
-
-        # Poll for container readiness instead of fixed sleep
         print("[Orchestrator] Waiting for TTS container to become ready...")
         _wait_for_tts_ready()
 
-        # 3. Forward text to the local TTS container
         print("[Orchestrator] Routing speech request to Kokoro...")
-        print(f"[Orchestrator] Payload: {payload.model_dump()}")
-
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
                 tts_response = await client.post(
                     "http://localhost:8880/v1/audio/speech",
                     json=payload.model_dump()
                 )
-                print(f"[Orchestrator] Kokoro response status: {tts_response.status_code}")
 
                 if tts_response.status_code != 200:
-                    print(f"[Orchestrator] Kokoro error response: {tts_response.text}")
                     raise HTTPException(status_code=tts_response.status_code,
                                         detail=tts_response.text or "TTS Generation Failed")
 
                 audio_content = tts_response.content
 
             except httpx.RequestError as e:
-                print(f"[Orchestrator] Connection error to Kokoro: {type(e).__name__}: {e}")
                 raise HTTPException(status_code=503, detail=f"Cannot connect to TTS container: {str(e)}")
 
-        # 4. Pause immediately to return CPU/RAM resources
         print("[Orchestrator] Audio generated. Pausing TTS container...")
         safely_pause_tts()
 
-        return {"status": "success", "message": "Audio generated successfully (bytes omitted for JSON mockup)"}
+        # Return the raw audio bytes as a streamable response
+        from fastapi.responses import Response
+        return Response(content=audio_content, media_type="audio/wav")
 
     except HTTPException:
         raise
     except Exception as e:
         import traceback
-        print(f"[Orchestrator] TTS Pipeline Error: {type(e).__name__}: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"TTS Pipeline Error: {type(e).__name__}: {str(e)}")
 
