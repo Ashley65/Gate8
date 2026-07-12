@@ -27,7 +27,7 @@ if docker is not None:
         docker_import_error = exc
 
 # Configuration of the API
-LM_STUDIO_URL = "http://localhost:1234/v1"
+LM_STUDIO_URL = "http://192.168.1.198:1234/v1"
 TTS_Container_name = "kokoro-tts-server"
 TTS_Container_image = "ghcr.io/remsky/kokoro-fastapi-cpu:latest"
 
@@ -76,11 +76,15 @@ def _wait_for_tts_ready(max_attempts=30, delay=1.0):
 
 
 def _ensure_tts_container_running():
-    """Start the TTS container using the Python SDK first, then fall back to the Docker CLI."""
+    """Start or unpause the TTS container using the Python SDK first, then fall back to the Docker CLI."""
     if docker_client is not None and docker is not None:
         try:
             container = docker_client.containers.get(TTS_Container_name)
-            if container.status != "running":
+            if container.status == "paused":
+                print(f"[Orchestrator] Unpausing TTS container {TTS_Container_name}...")
+                container.unpause()
+            elif container.status != "running":
+                print(f"[Orchestrator] Starting TTS container {TTS_Container_name}...")
                 container.start()
             return
         except docker_not_found_error:
@@ -96,12 +100,17 @@ def _ensure_tts_container_running():
             print(f"[Orchestrator] Docker SDK failed, falling back to Docker CLI: {exc}")
 
     try:
-        inspect = _run_docker_cli(["inspect", "-f", "{{.State.Running}}", TTS_Container_name])
+        inspect = _run_docker_cli(["inspect", "-f", "{{.State.Status}}", TTS_Container_name])
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=_docker_unavailable_detail()) from exc
 
     if inspect.returncode == 0:
-        if inspect.stdout.strip().lower() != "true":
+        status_str = inspect.stdout.strip().lower()
+        if status_str == "paused":
+            print(f"[Orchestrator] Unpausing TTS container {TTS_Container_name} via CLI...")
+            _run_docker_cli(["unpause", TTS_Container_name])
+        elif status_str != "running":
+            print(f"[Orchestrator] Starting TTS container {TTS_Container_name} via CLI...")
             start = _run_docker_cli(["start", TTS_Container_name])
             if start.returncode != 0:
                 raise HTTPException(status_code=503,
@@ -123,36 +132,36 @@ def _ensure_tts_container_running():
                             detail=f"Failed to create TTS container: {run.stderr.strip() or run.stdout.strip()}")
 
 
-def _stop_tts_container_cli():
-    """Force stops the container via the terminal if the Python library hangs."""
+def _pause_tts_container_cli():
+    """Pauses the container via the terminal if the Python library hangs."""
     try:
-        inspect = _run_docker_cli(["inspect", "-f", "{{.State.Running}}", TTS_Container_name])
+        inspect = _run_docker_cli(["inspect", "-f", "{{.State.Status}}", TTS_Container_name])
     except FileNotFoundError:
         return
 
-    if inspect.returncode == 0 and inspect.stdout.strip().lower() == "true":
-        print(f"[Orchestrator] Stopping TTS container {TTS_Container_name} via CLI...")
-        _run_docker_cli(["stop", TTS_Container_name])
+    if inspect.returncode == 0 and inspect.stdout.strip().lower() == "running":
+        print(f"[Orchestrator] Pausing TTS container {TTS_Container_name} via CLI...")
+        _run_docker_cli(["pause", TTS_Container_name])
 
 
-def safely_stop_tts():
-    """Checks if the TTS Docker container is running and stops it to free RAM."""
-    print("[Orchestrator] Ensuring TTS container is stopped...")
+def safely_pause_tts():
+    """Checks if the TTS Docker container is running and pauses it to free CPU/RAM."""
+    print("[Orchestrator] Ensuring TTS container is paused...")
     if docker_client is None or docker is None:
-        _stop_tts_container_cli()
+        _pause_tts_container_cli()
         return
 
     try:
         container = docker_client.containers.get(TTS_Container_name)
         if container.status == "running":
-            print(f"[Orchestrator] Stopping TTS container {TTS_Container_name} via SDK...")
-            container.stop()
-            time.sleep(1.0)
+            print(f"[Orchestrator] Pausing TTS container {TTS_Container_name} via SDK...")
+            container.pause()
+            time.sleep(0.5)
     except docker_not_found_error:
         pass
     except Exception as e:
-        print(f"[Orchestrator] Warning: Docker SDK failed to stop TTS: {e}")
-        _stop_tts_container_cli()
+        print(f"[Orchestrator] Warning: Docker SDK failed to pause TTS: {e}")
+        _pause_tts_container_cli()
 
 
 async def safely_unload_llm():
@@ -165,13 +174,28 @@ async def safely_unload_llm():
         try:
             loaded_instances = []
 
-            # 1. Try /api/v0/models which exposes explicit state="loaded"
-            models_resp = await client.get(f"{api_v0_url}/models")
-            if models_resp.status_code == 200:
-                models_data = models_resp.json().get("data", [])
-                loaded_instances = [m["id"] for m in models_data if m.get("state") == "loaded"]
-            else:
-                # Fallback: Query standard OpenAI /v1/models and try to unload everything returned
+            # 1. Try /api/v1/models (preferred)
+            v1_resp = await client.get(f"{api_v1_url}/models")
+            if v1_resp.status_code == 200:
+                v1_data = v1_resp.json()
+                # v1 uses "models" key and "loaded_instances" to indicate active models
+                models_list = v1_data.get("models", [])
+                for m in models_list:
+                    for instance in m.get("loaded_instances", []):
+                        if instance.get("id"):
+                            loaded_instances.append(instance["id"])
+            
+            # 2. Try /api/v0/models if v1 didn't yield anything or failed
+            if not loaded_instances:
+                v0_resp = await client.get(f"{api_v0_url}/models")
+                if v0_resp.status_code == 200:
+                    v0_data = v0_resp.json()
+                    # v0 uses "data" key and "state" field
+                    models_list = v0_data.get("data", [])
+                    loaded_instances = [m["id"] for m in models_list if m.get("state") == "loaded"]
+
+            # 3. Final fallback: standard OpenAI /v1/models
+            if not loaded_instances:
                 fallback_resp = await client.get(f"{LM_STUDIO_URL}/models")
                 if fallback_resp.status_code == 200:
                     models_data = fallback_resp.json().get("data", [])
@@ -185,16 +209,23 @@ async def safely_unload_llm():
             for instance_id in loaded_instances:
                 print(f"[Orchestrator] Ejecting LLM instance: {instance_id}")
 
-                # LM Studio versions differ: some expect "instance_id", some expect "model"
+                # Try v1 unload first
                 unload_resp = await client.post(
                     f"{api_v1_url}/models/unload",
                     json={"instance_id": instance_id}
                 )
 
-                # If unsupported format or 400 Bad Request, try standard "model" fallback
+                # Fallback to "model" key if "instance_id" fails
                 if unload_resp.status_code != 200:
                     unload_resp = await client.post(
                         f"{api_v1_url}/models/unload",
+                        json={"model": instance_id}
+                    )
+                
+                # Try v0 unload if v1 failed
+                if unload_resp.status_code != 200:
+                    unload_resp = await client.post(
+                        f"{api_v0_url}/models/unload",
                         json={"model": instance_id}
                     )
 
@@ -223,8 +254,8 @@ async def get_lm_studio_models() -> List[str]:
 
 @app.post("/v1/chat/completions")
 async def handle_chat(payload: ChatRequest):
-    # 1. Enforce the 8GB RAM limit by shutting down TTS first
-    safely_stop_tts()
+    # 1. Enforce the 8GB RAM limit by pausing TTS first
+    safely_pause_tts()
 
     # 2. Handle missing or "default" model selection
     if not payload.model or payload.model.lower() == "default":
@@ -301,9 +332,9 @@ async def handle_speech(payload: SpeechRequest):
                 print(f"[Orchestrator] Connection error to Kokoro: {type(e).__name__}: {e}")
                 raise HTTPException(status_code=503, detail=f"Cannot connect to TTS container: {str(e)}")
 
-        # 4. Tear down immediately to return memory to the OS pool
-        print("[Orchestrator] Audio generated. Shutting down TTS container...")
-        safely_stop_tts()
+        # 4. Pause immediately to return CPU/RAM resources
+        print("[Orchestrator] Audio generated. Pausing TTS container...")
+        safely_pause_tts()
 
         return {"status": "success", "message": "Audio generated successfully (bytes omitted for JSON mockup)"}
 
