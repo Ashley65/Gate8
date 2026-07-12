@@ -3,439 +3,547 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gate8 Web Novel Reader</title>
+    <title>Gate8 Batch Reader</title>
+    <!-- Tailwind CSS for modern aesthetics -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .loader {
-            border: 3px solid #374151;
-            border-bottom-color: #10b981; /* Emerald 500 */
-            border-radius: 50%;
-            display: inline-block;
-            box-sizing: border-box;
-            animation: rotation 1s linear infinite;
-        }
-        @keyframes rotation {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        /* Custom scrollbar for text area */
-        textarea::-webkit-scrollbar, .read-area::-webkit-scrollbar { width: 8px; }
-        textarea::-webkit-scrollbar-thumb, .read-area::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 4px; }
-        .highlight { background-color: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; padding-left: 8px; transition: all 0.3s ease; }
+        .loader { border: 3px solid #374151; border-bottom-color: #10b981; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .highlight { background-color: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; padding-left: 12px; transition: all 0.3s ease; }
     </style>
 </head>
-<body class="bg-gray-950 text-gray-100 h-screen flex flex-col font-sans selection:bg-emerald-500/30">
+<body class="bg-gray-950 text-gray-100 h-screen flex flex-col font-sans select-none">
 
-    <header class="bg-gray-900 border-b border-gray-800 p-4 shadow-lg flex items-center justify-between z-10">
+    <!-- Header Navigation -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 flex flex-wrap justify-between items-center gap-4">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-xl shadow-[0_0_15px_rgba(16,185,129,0.4)]">📖</div>
+            <div class="w-8 h-8 rounded bg-emerald-600 flex items-center justify-center font-bold text-lg shadow-lg">G8</div>
             <div>
-                <h1 class="text-xl font-bold text-white tracking-tight">Gate8 Reader</h1>
-                <p class="text-xs text-emerald-400 font-medium">Neural Web Novel Narrator</p>
+                <h1 class="text-xl font-bold text-white">Gate8 Batch Reader</h1>
+                <p class="text-xs text-gray-400">Sequential Novel Narrator</p>
             </div>
         </div>
 
-        <!-- Controls -->
-        <div class="flex items-center space-x-4">
-            <!-- Voice Selector -->
-            <div class="flex flex-col">
-                <label for="voiceSelect" class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Narrator Voice</label>
-                <select id="voiceSelect" class="bg-gray-800 border border-gray-700 text-sm rounded-md px-3 py-1.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-                    <!-- Standard Kokoro Voices -->
-                    <option value="af_bella">Bella (American Female)</option>
-                    <option value="af_sarah">Sarah (American Female)</option>
-                    <option value="am_adam">Adam (American Male)</option>
-                    <option value="am_michael">Michael (American Male)</option>
-                    <option value="bf_emma">Emma (British Female)</option>
-                    <option value="bf_isabella">Isabella (British Female)</option>
-                    <option value="bm_george">George (British Male)</option>
-                    <option value="bm_lewis">Lewis (British Male)</option>
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Model Selection -->
+            <div class="flex items-center space-x-2">
+                <span class="text-xs text-gray-400 font-medium">Model:</span>
+                <select id="modelSelect" class="bg-gray-800 border border-gray-700 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-emerald-500 text-white"></select>
+            </div>
+
+            <!-- Voice Selection (Populated with your exact container voices) -->
+            <div class="flex items-center space-x-2">
+                <span class="text-xs text-gray-400 font-medium">Voice:</span>
+                <select id="voiceSelect" class="bg-gray-800 border border-gray-700 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-emerald-500 text-white">
+                    <optgroup label="British Female">
+                        <option value="bf_v0isabella" selected>Isabella (bf_v0isabella)</option>
+                        <option value="bf_alice">Alice (bf_alice)</option>
+                        <option value="bf_emma">Emma (bf_emma)</option>
+                        <option value="bf_lily">Lily (bf_lily)</option>
+                        <option value="bf_v0emma">Emma v0 (bf_v0emma)</option>
+                    </optgroup>
+                    <optgroup label="British Male">
+                        <option value="bm_daniel">Daniel (bm_daniel)</option>
+                        <option value="bm_fable">Fable (bm_fable)</option>
+                        <option value="bm_george">George (bm_george)</option>
+                        <option value="bm_lewis">Lewis (bm_lewis)</option>
+                        <option value="bm_v0george">George v0 (bm_v0george)</option>
+                        <option value="bm_v0lewis">Lewis v0 (bm_v0lewis)</option>
+                    </optgroup>
+                    <optgroup label="American Female">
+                        <option value="af_bella">Bella (af_bella)</option>
+                        <option value="af_alloy">Alloy (af_alloy)</option>
+                        <option value="af_aoede">Aoede (af_aoede)</option>
+                        <option value="af_heart">Heart (af_heart)</option>
+                        <option value="af_jadzia">Jadzia (af_jadzia)</option>
+                        <option value="af_jessica">Jessica (af_jessica)</option>
+                        <option value="af_kore">Kore (af_kore)</option>
+                        <option value="af_nicole">Nicole (af_nicole)</option>
+                        <option value="af_nova">Nova (af_nova)</option>
+                        <option value="af_river">River (af_river)</option>
+                        <option value="af_sarah">Sarah (af_sarah)</option>
+                        <option value="af_sky">Sky (af_sky)</option>
+                        <option value="af_v0">v0 (af_v0)</option>
+                        <option value="af_v0bella">Bella v0 (af_v0bella)</option>
+                        <option value="af_v0irulan">Irulan v0 (af_v0irulan)</option>
+                        <option value="af_v0nicole">Nicole v0 (af_v0nicole)</option>
+                        <option value="af_v0sarah">Sarah v0 (af_v0sarah)</option>
+                        <option value="af_v0sky">Sky v0 (af_v0sky)</option>
+                    </optgroup>
+                    <optgroup label="American Male">
+                        <option value="am_adam">Adam (am_adam)</option>
+                        <option value="am_echo">Echo (am_echo)</option>
+                        <option value="am_eric">Eric (am_eric)</option>
+                        <option value="am_fenrir">Fenrir (am_fenrir)</option>
+                        <option value="am_liam">Liam (am_liam)</option>
+                        <option value="am_michael">Michael (am_michael)</option>
+                        <option value="am_onyx">Onyx (am_onyx)</option>
+                        <option value="am_puck">Puck (am_puck)</option>
+                        <option value="am_santa">Santa (am_santa)</option>
+                        <option value="am_v0adam">Adam v0 (am_v0adam)</option>
+                        <option value="am_v0gurney">Gurney v0 (am_v0gurney)</option>
+                        <option value="am_v0michael">Michael v0 (am_v0michael)</option>
+                    </optgroup>
+                    <optgroup label="Other Voices">
+                        <option value="ef_dora">Dora Spanish (ef_dora)</option>
+                        <option value="em_alex">Alex Spanish (em_alex)</option>
+                        <option value="ff_siwis">Siwis French (ff_siwis)</option>
+                        <option value="hf_alpha">Alpha Hindi (hf_alpha)</option>
+                        <option value="hf_beta">Beta Hindi (hf_beta)</option>
+                        <option value="if_sara">Sara Italian (if_sara)</option>
+                        <option value="im_nicola">Nicola Italian (im_nicola)</option>
+                        <option value="jf_alpha">Alpha Japanese (jf_alpha)</option>
+                        <option value="jm_kumo">Kumo Japanese (jm_kumo)</option>
+                        <option value="zf_xiaobei">Xiaobei Chinese (zf_xiaobei)</option>
+                        <option value="zm_yunjian">Yunjian Chinese (zm_yunjian)</option>
+                    </optgroup>
                 </select>
             </div>
 
-            <!-- Model Selector -->
-            <div class="flex flex-col">
-                <label for="modelSelect" class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Editor Model (< 2GB)</label>
-                <select id="modelSelect" class="bg-gray-800 border border-gray-700 text-sm rounded-md px-3 py-1.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-                    <option value="">Loading models...</option>
-                </select>
-            </div>
+            <!-- Grammar Tool -->
+            <label class="flex items-center space-x-2 text-sm bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="checkbox" id="grammarToggle" class="accent-emerald-500 rounded" checked>
+                <span class="text-gray-300">Clean Grammar</span>
+            </label>
 
-            <!-- Grammar Toggle -->
-            <div class="flex flex-col items-center justify-center ml-2">
-                <label class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Fix Grammar</label>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="grammarToggle" class="sr-only peer">
-                    <div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white shadow-inner"></div>
-                </label>
+            <!-- Play Trigger -->
+            <div class="flex items-center gap-2">
+                <button id="playBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-1.5 rounded-lg font-bold shadow-lg transition-colors flex items-center space-x-1">
+                    <span>Play Chapter</span>
+                </button>
+                <button id="pauseBtn" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-5 py-1.5 rounded-lg font-bold shadow-lg transition-colors">
+                    <span>Pause</span>
+                </button>
+                <button id="stopBtn" class="hidden bg-red-600 hover:bg-red-500 text-white px-5 py-1.5 rounded-lg font-bold shadow-lg transition-colors">
+                    <span>Stop</span>
+                </button>
             </div>
         </div>
     </header>
 
+    <!-- Main Workspace -->
     <main class="flex-1 flex overflow-hidden">
-
-        <!-- Left Panel: Input Area -->
-        <div id="inputPanel" class="w-1/2 border-r border-gray-800 flex flex-col bg-gray-900 transition-all duration-500">
-            <div class="p-3 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center">
-                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Paste Chapter Text</h2>
-                <button id="clearBtn" class="text-xs text-gray-500 hover:text-red-400 transition-colors">Clear</button>
+        <!-- Chapter Sidebar -->
+        <div class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h2 class="font-bold text-sm uppercase tracking-wider text-gray-400">Chapters</h2>
+                <button id="addChapterBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors">
+                    <span class="text-xl leading-none">+</span>
+                </button>
             </div>
-            <textarea id="novelInput" class="flex-1 w-full bg-transparent p-6 text-gray-300 resize-none outline-none focus:bg-gray-800/30 transition-colors leading-relaxed text-lg" placeholder="Paste your translated web novel chapter here..."></textarea>
+            <div id="chapterList" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <!-- Chapter items will be injected here -->
+            </div>
         </div>
 
-        <!-- Right Panel: Reading Area & Progress -->
-        <div id="readPanel" class="flex-1 flex flex-col bg-gray-950 relative">
-            <div class="p-3 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center">
-                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Teleprompter</h2>
-                <span id="progressText" class="text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">0 / 0 Paragraphs</span>
-            </div>
-
-            <div id="displayText" class="flex-1 p-8 overflow-y-auto read-area text-xl leading-loose text-gray-400 font-serif space-y-6">
-                <!-- Text chunks will be injected here -->
-                <div class="flex items-center justify-center h-full text-gray-600 italic">
-                    Text will appear here during narration...
-                </div>
-            </div>
-
-            <!-- Overlay for Loading/Processing -->
-            <div id="processingOverlay" class="absolute inset-0 bg-gray-950/90 backdrop-blur-sm hidden flex-col items-center justify-center z-20">
-                <div class="loader w-12 h-12 mb-4"></div>
-                <h3 id="overlayTitle" class="text-xl font-bold text-white mb-2">Phase 1: Editing Text</h3>
-                <p id="overlaySubtitle" class="text-sm text-gray-400">Loading LLM to unified memory...</p>
-                <div class="w-64 bg-gray-800 rounded-full h-2 mt-6 overflow-hidden">
-                    <div id="overlayProgressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
+        <div class="flex-1 flex flex-col">
+            <textarea id="novelInput" class="h-1/3 bg-gray-900/30 p-4 text-gray-300 outline-none resize-none border-b border-gray-800 font-serif leading-relaxed text-base focus:bg-gray-900/50 transition-colors" placeholder="Chapter content..."></textarea>
+            <div id="displayText" class="flex-1 p-8 overflow-y-auto text-lg leading-relaxed text-gray-300 font-serif space-y-6 bg-gray-950">
+                <div class="text-gray-500 italic text-center mt-12">Add a chapter and press Play to start.</div>
             </div>
         </div>
     </main>
 
-    <footer class="bg-gray-900 border-t border-gray-800 p-4 shadow-[0_-4px_15px_rgba(0,0,0,0.2)] z-10">
-        <div class="max-w-3xl mx-auto flex items-center justify-between">
-
-            <!-- Status -->
-            <div class="w-1/3">
-                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Gateway Status</div>
-                <div id="gatewayStatus" class="text-sm font-medium text-gray-300 truncate">Idle</div>
-            </div>
-
-            <!-- Playback Controls -->
-            <div class="flex items-center space-x-4">
-                <button id="playBtn" class="w-14 h-14 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg transition-transform transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </button>
-                <button id="stopBtn" class="w-10 h-10 bg-gray-800 hover:bg-red-500/20 hover:text-red-400 text-gray-400 border border-gray-700 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Volume / Spare space -->
-            <div class="w-1/3 text-right">
-                <span id="etaText" class="text-xs text-gray-500">Ready to orchestrate.</span>
-            </div>
+    <!-- Processing Overlay -->
+    <div id="processingOverlay" class="hidden fixed inset-0 bg-gray-950/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 transition-all duration-300">
+        <div class="loader w-12 h-12 mb-4"></div>
+        <h3 id="overlayTitle" class="text-xl font-bold text-white tracking-wide">Processing Novel</h3>
+        <p id="overlaySubtitle" class="text-sm text-gray-400 mt-2">Initializing...</p>
+        <div class="w-64 bg-gray-800 rounded-full h-2 mt-6 overflow-hidden">
+            <div id="overlayProgressBar" class="bg-emerald-500 h-2 w-0 transition-all duration-300"></div>
         </div>
-    </footer>
+    </div>
 
-    <!-- Hidden audio element for sequential playback -->
+    <!-- Hidden audio element -->
     <audio id="audioPlayer" class="hidden"></audio>
 
+    <!-- Client Scripting -->
     <script>
-        // Use current origin to hit the Gate8 main.py API
         const BASE_URL = window.location.origin;
-
-        // DOM Elements
-        const novelInput = document.getElementById('novelInput');
-        const displayText = document.getElementById('displayText');
-        const playBtn = document.getElementById('playBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const grammarToggle = document.getElementById('grammarToggle');
-        const modelSelect = document.getElementById('modelSelect');
-        const voiceSelect = document.getElementById('voiceSelect');
-        const audioPlayer = document.getElementById('audioPlayer');
-
-        const gatewayStatus = document.getElementById('gatewayStatus');
-        const progressText = document.getElementById('progressText');
-        const overlay = document.getElementById('processingOverlay');
-        const overlayTitle = document.getElementById('overlayTitle');
-        const overlaySubtitle = document.getElementById('overlaySubtitle');
-        const overlayProgressBar = document.getElementById('overlayProgressBar');
-
-        // State Variables
-        let paragraphs = [];
-        let currentIndex = 0;
+        let chapters = [];
+        let currentChapterIndex = 0;
+        let playingChapterIndex = -1; // -1 means nothing is playing
         let isPlaying = false;
-        let isStopped = false;
+        let isPaused = false;
+        let abortController = null;
 
+        // Initialize with one chapter
+        addChapter();
+
+        function addChapter() {
+            const id = Date.now();
+            const chapter = {
+                id,
+                title: `Chapter ${chapters.length + 1}`,
+                content: "",
+                chunks: [],
+                audioQueue: new Map(),
+                currentIndex: 0,
+                status: 'pending', // pending, processing, ready, playing, completed
+                abortController: new AbortController()
+            };
+            chapters.push(chapter);
+            renderChapterList();
+            if (chapters.length === 1) {
+                selectChapter(0);
+            }
+        }
+
+        function renderChapterList() {
+            const list = document.getElementById('chapterList');
+            list.innerHTML = chapters.map((ch, index) => `
+                <div onclick="selectChapter(${index})" class="group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${index === currentChapterIndex ? 'bg-gray-800 text-white' : 'hover:bg-gray-800/50 text-gray-400'}">
+                    <div class="flex flex-col overflow-hidden">
+                        <span class="text-sm font-medium truncate">${ch.title}</span>
+                        <span class="text-[10px] uppercase tracking-tighter ${getStatusClass(ch.status)}">${ch.status}</span>
+                    </div>
+                    ${index !== 0 ? `<button onclick="event.stopPropagation(); deleteChapter(${index})" class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>` : ''}
+                </div>
+            `).join("");
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'processing': return 'text-amber-500';
+                case 'ready': return 'text-emerald-500';
+                case 'playing': return 'text-blue-500 font-bold';
+                case 'completed': return 'text-gray-600';
+                default: return 'text-gray-500';
+            }
+        }
+
+        function selectChapter(index) {
+            // Save current textarea content to previous chapter
+            if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
+                chapters[currentChapterIndex].content = document.getElementById('novelInput').value;
+            }
+            
+            currentChapterIndex = index;
+            const chapter = chapters[index];
+            document.getElementById('novelInput').value = chapter.content;
+            
+            // If it's playing or completed, show the chunks, else show placeholder or raw content
+            renderChapterDisplay(index);
+            renderChapterList();
+        }
+
+        function renderChapterDisplay(index) {
+            const display = document.getElementById('displayText');
+            const chapter = chapters[index];
+            
+            if (chapter.chunks.length > 0) {
+                display.innerHTML = chapter.chunks.map((chunk, i) => `
+                    <p id="chunk-${index}-${i}" class="py-2 px-3 rounded-lg border border-transparent transition-all duration-300 ${i < chapter.currentIndex ? 'text-gray-500' : (index === playingChapterIndex && i === chapter.currentIndex ? 'highlight' : '')}">
+                        ${chunk}
+                    </p>
+                `).join("");
+                
+                // Scroll to active chunk if playing
+                if (index === playingChapterIndex) {
+                    const active = document.getElementById(`chunk-${index}-${chapter.currentIndex}`);
+                    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } else {
+                display.innerHTML = `<div class="text-gray-500 italic text-center mt-12">${chapter.content ? "Press Play to process and start narration." : "Enter content in the box above."}</div>`;
+            }
+        }
+
+        function deleteChapter(index) {
+            if (index === playingChapterIndex) {
+                stopPlayback();
+            }
+            chapters.splice(index, 1);
+            if (currentChapterIndex >= chapters.length) {
+                currentChapterIndex = chapters.length - 1;
+            }
+            renderChapterList();
+            if (chapters.length > 0) selectChapter(currentChapterIndex);
+        }
+
+        // 1. Fetch Models dynamically
         async function loadModels() {
             try {
-                // Send dummy request to trigger the model list fallback in Gate8
-                const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
+                const resp = await fetch(`${BASE_URL}/v1/chat/completions`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ messages: [] })
                 });
 
-                const data = await response.json();
+                // Allow status 400 through since Gate8 uses it to dynamically return available_models
+                if (!resp.ok && resp.status !== 400) {
+                    throw new Error("Gateway is currently offline");
+                }
+
+                const data = await resp.json();
+                const select = document.getElementById('modelSelect');
+                select.innerHTML = ""; // Clear loading state
 
                 if (data.available_models && data.available_models.length > 0) {
-                    modelSelect.innerHTML = '';
-                    data.available_models.forEach(model => {
-                        const option = document.createElement('option');
-                        option.value = model;
-                        option.textContent = model;
-                        modelSelect.appendChild(option);
+                    data.available_models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        select.appendChild(opt);
                     });
                 } else {
-                    modelSelect.innerHTML = '<option value="">No models found</option>';
+                    throw new Error("No models currently loaded inside LM Studio");
                 }
-            } catch (err) {
-                console.error("Gateway offline:", err);
-                modelSelect.innerHTML = '<option value="">Cannot connect to Gate8</option>';
+            } catch (e) {
+                console.error(e);
+                document.getElementById('modelSelect').innerHTML = '<option value="">Gateway Offline / No Models</option>';
             }
         }
 
-        function showOverlay(title, subtitle, progress = 0) {
-            overlay.classList.remove('hidden');
-            overlay.classList.add('flex');
-            overlayTitle.textContent = title;
-            overlaySubtitle.textContent = subtitle;
-            overlayProgressBar.style.width = `${progress}%`;
-        }
-
-        function hideOverlay() {
-            overlay.classList.add('hidden');
-            overlay.classList.remove('flex');
-        }
-
-        function chunkText(text) {
-            // Split by double newline to get natural paragraphs
-            const rawParagraphs = text.split(/\n\n+/);
-            const cleanChunks = [];
-
-            // Re-combine very short paragraphs (like single dialogue lines) so TTS doesn't stutter too much
-            let currentChunk = "";
-            for (const p of rawParagraphs) {
-                const cleanP = p.trim().replace(/\n/g, ' ');
-                if (!cleanP) continue;
-
-                if (currentChunk.length + cleanP.length < 500) {
-                    currentChunk += (currentChunk ? " " : "") + cleanP;
+        // 2. Intelligent Chunking: Combines short lines
+        function createChunks(text) {
+            const paragraphs = text.split(/\n\n+/);
+            const result = [];
+            let current = "";
+            for (let p of paragraphs) {
+                p = p.trim();
+                if (!p) continue;
+                // Target roughly 2000 characters to reduce API overhead and make it feel more "continuous"
+                if (current.length + p.length < 2000) {
+                    current += (current ? "\n\n" : "") + p;
                 } else {
-                    if (currentChunk) cleanChunks.push(currentChunk);
-                    currentChunk = cleanP;
+                    result.push(current);
+                    current = p;
                 }
             }
-            if (currentChunk) cleanChunks.push(currentChunk);
-            return cleanChunks;
+            if (current) result.push(current);
+            return result;
         }
 
-        function renderTeleprompter() {
-            displayText.innerHTML = '';
-            paragraphs.forEach((p, idx) => {
-                const pEl = document.createElement('p');
-                pEl.id = `para-${idx}`;
-                pEl.textContent = p;
-                pEl.className = "transition-all duration-300 cursor-pointer hover:text-gray-200";
+        // 3. Batch Orchestrator Entrypoint
+        async function start() {
+            if (isPlaying) return;
 
-                // Allow user to click a paragraph to jump to it
-                pEl.onclick = () => {
-                    if (isPlaying) {
-                        isStopped = true;
-                        audioPlayer.pause();
+            // Save current content
+            if (currentChapterIndex >= 0) {
+                chapters[currentChapterIndex].content = document.getElementById('novelInput').value.trim();
+            }
+
+            if (chapters.length === 0 || !chapters[0].content) return;
+
+            isPlaying = true;
+            isPaused = false;
+            playingChapterIndex = 0;
+            if (chapters[playingChapterIndex].status === 'completed') {
+                // Find first non-completed chapter
+                const next = chapters.findIndex(c => c.status !== 'completed');
+                if (next !== -1) playingChapterIndex = next;
+            }
+            abortController = new AbortController();
+
+            updateUIState();
+            
+            // Start processing all chapters sequentially in the background
+            processChapters();
+            
+            // Start playback
+            playNext();
+        }
+
+        async function processChapters() {
+            for (let i = 0; i < chapters.length; i++) {
+                if (!isPlaying) break;
+                if (chapters[i].status === 'completed' || chapters[i].status === 'ready' || chapters[i].status === 'processing') continue;
+                
+                await processChapter(i);
+            }
+        }
+
+        async function processChapter(index) {
+            const chapter = chapters[index];
+            if (!chapter.content) return;
+
+            chapter.status = 'processing';
+            renderChapterList();
+
+            const useGrammar = document.getElementById('grammarToggle').checked;
+            const chosenModel = document.getElementById('modelSelect').value;
+            const voiceSelect = document.getElementById('voiceSelect').value;
+
+            chapter.chunks = createChunks(chapter.content);
+            if (index === currentChapterIndex) renderChapterDisplay(index);
+
+            for (let i = 0; i < chapter.chunks.length; i++) {
+                if (!isPlaying) break;
+
+                if (useGrammar) {
+                    try {
+                        const resp = await fetch(`${BASE_URL}/v1/chat/completions`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                model: chosenModel,
+                                messages: [{"role": "user", "content": `Clean, polish and fix grammar for this web novel segment. Only return the corrected text, no preambles, notes or conversational text:\n\n${chapter.chunks[i]}`}]
+                            }),
+                            signal: abortController.signal
+                        });
+                        const data = await resp.json();
+                        chapter.chunks[i] = data.choices[0].message.content.trim();
+                        if (index === currentChapterIndex) renderChapterDisplay(index);
+                    } catch (e) {
+                        if (e.name === 'AbortError') return;
+                        console.error("Grammar fix failed for chapter", index, "chunk", i, e);
                     }
-                    currentIndex = idx;
-                    updateProgress();
-                    highlightCurrent();
-                };
-
-                displayText.appendChild(pEl);
-            });
-        }
-
-        function highlightCurrent() {
-            // Remove old highlights
-            document.querySelectorAll('.read-area p').forEach(el => {
-                el.classList.remove('highlight', 'text-white');
-                el.classList.add('text-gray-400');
-            });
-
-            // Add new highlight
-            const currentEl = document.getElementById(`para-${currentIndex}`);
-            if (currentEl) {
-                currentEl.classList.remove('text-gray-400');
-                currentEl.classList.add('highlight', 'text-white');
-                // Smooth scroll into view
-                currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        function updateProgress() {
-            progressText.textContent = `${Math.min(currentIndex + 1, paragraphs.length)} / ${paragraphs.length} Paragraphs`;
-        }
-
-        async function processGrammarPhase() {
-            const model = modelSelect.value;
-            if (!model) {
-                alert("Please select a lightweight model in the top right to use the Grammar Fix feature.");
-                return false;
-            }
-
-            gatewayStatus.textContent = "Swapping to LLM...";
-            const fixedParagraphs = [];
-
-            for (let i = 0; i < paragraphs.length; i++) {
-                if (isStopped) return false;
-
-                const progress = Math.round((i / paragraphs.length) * 100);
-                showOverlay("Phase 1: Neural Editing", `Fixing grammar & flow: Paragraph ${i+1} of ${paragraphs.length}`, progress);
-
-                const prompt = `You are a professional editor. Fix any grammatical errors, awkward phrasing, or spelling mistakes in the following web novel excerpt. Do not change the story, just improve the prose. Return ONLY the edited text, no conversational filler.\n\nTEXT:\n${paragraphs[i]}`;
-
-                try {
-                    const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: model,
-                            messages: [
-                                {"role": "system", "content": "You are a professional book editor. Output only the corrected text."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            temperature: 0.3
-                        })
-                    });
-
-                    if (!response.ok) throw new Error("LLM Request Failed");
-                    const data = await response.json();
-                    let editedText = data.choices[0].message.content.trim();
-
-                    // Cleanup common LLM artifacts if it ignores instructions
-                    editedText = editedText.replace(/^Here is the edited text:?\n*/i, '');
-
-                    fixedParagraphs.push(editedText);
-                } catch (err) {
-                    console.error("Grammar fix failed on chunk", i, err);
-                    fixedParagraphs.push(paragraphs[i]); // Fallback to original on error
                 }
-            }
 
-            paragraphs = fixedParagraphs;
-            renderTeleprompter();
-            return true;
+                // Start playback if this is the first chunk of the first chapter
+                if (index === 0 && i === 0 && isPlaying && !isPaused && document.getElementById('audioPlayer').paused) {
+                    playNext();
+                }
+
+                // Prefetch audio
+                fetchAudio(index, i);
+            }
+            
+            chapter.status = 'ready';
+            renderChapterList();
         }
 
-        async function playNextChunk() {
-            if (isStopped || currentIndex >= paragraphs.length) {
-                finishReading();
-                return;
-            }
-
-            highlightCurrent();
-            updateProgress();
-
-            const textToRead = paragraphs[currentIndex];
-            const voice = voiceSelect.value;
-
-            gatewayStatus.textContent = `Generating Audio (Chunk ${currentIndex+1})...`;
-
+        async function fetchAudio(chapterIndex, chunkIndex) {
+            const chapter = chapters[chapterIndex];
+            if (chapter.audioQueue.has(chunkIndex)) return;
+            
+            const voiceSelect = document.getElementById('voiceSelect').value;
             try {
-                const response = await fetch(`${BASE_URL}/v1/audio/speech`, {
+                const resp = await fetch(`${BASE_URL}/v1/audio/speech`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        input: textToRead,
-                        voice: voice
-                    })
+                        input: chapter.chunks[chunkIndex],
+                        voice: voiceSelect
+                    }),
+                    signal: abortController.signal
                 });
 
-                if (!response.ok) throw new Error("TTS generation failed");
+                if (!resp.ok) throw new Error("Audio generation failed");
 
-                gatewayStatus.textContent = `Playing...`;
+                const blob = await resp.blob();
+                chapter.audioQueue.set(chunkIndex, URL.createObjectURL(blob));
 
-                const audioBlob = await response.blob();
-                const audioUrl = URL.createObjectURL(audioBlob);
-
-                audioPlayer.src = audioUrl;
-                audioPlayer.play();
-
-            } catch (err) {
-                console.error("TTS Error:", err);
-                gatewayStatus.textContent = "TTS Error. Skipping...";
-                // Skip to next chunk automatically on error
-                currentIndex++;
-                setTimeout(playNextChunk, 1000);
+                // If we were waiting for this chunk to play, trigger it
+                if (isPlaying && !isPaused && playingChapterIndex === chapterIndex && chapter.currentIndex === chunkIndex && document.getElementById('audioPlayer').paused) {
+                    playNext();
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') return;
+                console.error("Audio step error:", e);
             }
         }
 
-        // Trigger loop when audio ends
-        audioPlayer.onended = () => {
-            if (!isStopped) {
-                currentIndex++;
-                playNextChunk();
-            }
-        };
+        function updateUIState() {
+            const playBtn = document.getElementById('playBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const stopBtn = document.getElementById('stopBtn');
 
-        async function startReading() {
-            const rawText = novelInput.value.trim();
-            if (!rawText) {
-                alert("Please paste some text first.");
+            if (isPlaying) {
+                playBtn.classList.add('hidden');
+                pauseBtn.classList.remove('hidden');
+                stopBtn.classList.remove('hidden');
+                pauseBtn.textContent = isPaused ? "Resume" : "Pause";
+            } else {
+                playBtn.classList.remove('hidden');
+                pauseBtn.classList.add('hidden');
+                stopBtn.classList.add('hidden');
+            }
+        }
+
+        function togglePause() {
+            const audioPlayer = document.getElementById('audioPlayer');
+            if (isPaused) {
+                isPaused = false;
+                audioPlayer.play();
+            } else {
+                isPaused = true;
+                audioPlayer.pause();
+            }
+            updateUIState();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            isPaused = false;
+            playingChapterIndex = -1;
+            if (abortController) abortController.abort();
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.pause();
+            audioPlayer.src = "";
+            
+            chapters.forEach(ch => {
+                ch.audioQueue.forEach(url => URL.revokeObjectURL(url));
+                ch.audioQueue.clear();
+                ch.status = 'pending';
+                ch.currentIndex = 0;
+            });
+            
+            updateUIState();
+            renderChapterList();
+            renderChapterDisplay(currentChapterIndex);
+        }
+
+        // 4. Sequential Narrator Playback
+        async function playNext() {
+            if (!isPlaying || isPaused) return;
+
+            if (playingChapterIndex >= chapters.length) {
+                stopPlayback();
                 return;
             }
 
-            // Lock UI
-            isPlaying = true;
-            isStopped = false;
-            playBtn.disabled = true;
-            stopBtn.disabled = false;
-            novelInput.disabled = true;
-
-            // Initialize chunks
-            paragraphs = chunkText(rawText);
-            currentIndex = 0;
-            renderTeleprompter();
-
-            // Phase 1: Grammar Fix (If enabled)
-            if (grammarToggle.checked) {
-                const success = await processGrammarPhase();
-                if (!success || isStopped) {
-                    finishReading();
-                    return;
+            const chapter = chapters[playingChapterIndex];
+            
+            if (chapter.currentIndex >= chapter.chunks.length) {
+                chapter.status = 'completed';
+                playingChapterIndex++;
+                if (playingChapterIndex < chapters.length) {
+                    chapters[playingChapterIndex].status = 'playing';
+                    renderChapterList();
+                    playNext();
+                } else {
+                    stopPlayback();
                 }
+                return;
             }
 
-            // Phase 2: Start Narration Loop
-            hideOverlay();
-            playNextChunk();
+            chapter.status = 'playing';
+            renderChapterList();
+
+            const audioPlayer = document.getElementById('audioPlayer');
+
+            if (chapter.audioQueue.has(chapter.currentIndex)) {
+                if (playingChapterIndex === currentChapterIndex) {
+                    renderChapterDisplay(playingChapterIndex);
+                }
+
+                audioPlayer.src = chapter.audioQueue.get(chapter.currentIndex);
+                audioPlayer.play();
+
+                audioPlayer.onended = () => {
+                    URL.revokeObjectURL(chapter.audioQueue.get(chapter.currentIndex));
+                    chapter.audioQueue.delete(chapter.currentIndex);
+                    chapter.currentIndex++;
+                    playNext();
+                };
+            } else {
+                // Wait for audio
+                if (playingChapterIndex === currentChapterIndex) {
+                    const activeParagraph = document.getElementById(`chunk-${playingChapterIndex}-${chapter.currentIndex}`);
+                    if (activeParagraph) {
+                        activeParagraph.textContent = "Loading audio...";
+                    }
+                }
+            }
         }
 
-        function finishReading() {
-            isPlaying = false;
-            isStopped = true;
-            audioPlayer.pause();
-            hideOverlay();
-
-            playBtn.disabled = false;
-            stopBtn.disabled = true;
-            novelInput.disabled = false;
-            gatewayStatus.textContent = "Idle";
-        }
-
-        // Event Listeners
-        playBtn.addEventListener('click', startReading);
-        stopBtn.addEventListener('click', finishReading);
-        clearBtn.addEventListener('click', () => {
-            novelInput.value = '';
-            displayText.innerHTML = '<div class="flex items-center justify-center h-full text-gray-600 italic">Text will appear here during narration...</div>';
-            progressText.textContent = "0 / 0 Paragraphs";
-        });
-
-        // Initialization
+        document.getElementById('playBtn').onclick = start;
+        document.getElementById('pauseBtn').onclick = togglePause;
+        document.getElementById('stopBtn').onclick = stopPlayback;
+        document.getElementById('addChapterBtn').onclick = addChapter;
         loadModels();
     </script>
 </body>
