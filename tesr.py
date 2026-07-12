@@ -4,8 +4,8 @@ import os
 import time
 
 # If you run this on the same Mac Mini, use localhost.
-# If running from another computer on the network, use http://toggle.local:8000
-BASE_URL = "http://localhost:8000"
+# If running from another computer on the network, use http://192.168.1.198:8000
+BASE_URL = "http://192.168.1.198:8000"
 
 
 def test_no_model_selection():
@@ -22,17 +22,17 @@ def test_no_model_selection():
 
         if response.status_code == 400:
             data = response.json()
-            print("✅ SUCCESS: Gateway intercepted the request.")
+            print("SUCCESS: Gateway intercepted the request.")
             print("Available Models from LM Studio:")
             for model in data.get("available_models", []):
                 print(f"  - {model}")
             return data.get("available_models", [])
         else:
-            print(f"❌ FAILED: Expected 400 Bad Request, got {response.status_code}")
+            print("FAILED: Expected 400 Bad Request, got " + str(response.status_code))
             print(response.text)
             return []
     except requests.exceptions.ConnectionError:
-        print("❌ FAILED: Could not connect to Gateway. Is gateway.py running?")
+        print("FAILED: Could not connect to Gateway. Is gateway.py running?")
         return []
 
 
@@ -54,10 +54,10 @@ def test_chat_completion(model_id):
 
     if response.status_code == 200:
         data = response.json()
-        print("✅ SUCCESS: LLM Response:")
+        print("SUCCESS: LLM Response:")
         print(data["choices"][0]["message"]["content"])
     else:
-        print(f"❌ FAILED: Status {response.status_code}")
+        print("FAILED: Status " + str(response.status_code))
         print(response.text)
 
 
@@ -75,10 +75,10 @@ def test_tts_generation():
     response = requests.post(f"{BASE_URL}/v1/audio/speech", json=payload)
 
     if response.status_code == 200:
-        print("✅ SUCCESS: Audio generation triggered and completed!")
+        print("SUCCESS: Audio generation triggered and completed!")
         print("Gateway Response:", response.json())
     else:
-        print(f"❌ FAILED: Status {response.status_code}")
+        print("FAILED: Status " + str(response.status_code))
         print(response.text)
 
 

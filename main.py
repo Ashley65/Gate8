@@ -1,3 +1,4 @@
+import os
 import time
 import subprocess
 import httpx
@@ -27,7 +28,7 @@ if docker is not None:
         docker_import_error = exc
 
 # Configuration of the API
-LM_STUDIO_URL = "http://192.168.1.198:1234/v1"
+LM_STUDIO_URL = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
 TTS_Container_name = "kokoro-tts-server"
 TTS_Container_image = "ghcr.io/remsky/kokoro-fastapi-cpu:latest"
 
@@ -46,13 +47,33 @@ class SpeechRequest(BaseModel):
 
 def _docker_unavailable_detail() -> str:
     if docker_import_error is None:
-        return "Docker is unavailable on this system."
-    return f"Docker is unavailable: {docker_import_error}"
+        return "Docker is unavailable: No Docker SDK found and 'docker' CLI command failed."
+    
+    error_str = str(docker_import_error)
+    detail = f"Docker is unavailable: {error_str}"
+    
+    if "distutils" in error_str.lower():
+        detail += " (Note: Python 3.12+ requires 'pip install setuptools' for the Docker SDK to work)."
+    
+    return detail
 
 
 def _run_docker_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
     """Helper to run raw Docker CLI commands if the SDK fails."""
-    return subprocess.run(["docker", *args], capture_output=True, text=True)
+    # Try common paths for Docker, especially useful on macOS or if PATH is restricted
+    paths_to_try = ["docker", "/usr/local/bin/docker", "/usr/bin/docker", "/opt/homebrew/bin/docker"]
+    
+    last_error = None
+    for path in paths_to_try:
+        try:
+            return subprocess.run([path, *args], capture_output=True, text=True)
+        except FileNotFoundError as e:
+            last_error = e
+            continue
+            
+    if last_error:
+        raise last_error
+    raise FileNotFoundError("docker command not found")
 
 
 def _wait_for_tts_ready(max_attempts=30, delay=1.0):
@@ -100,6 +121,8 @@ def _ensure_tts_container_running():
             print(f"[Orchestrator] Docker SDK failed, falling back to Docker CLI: {exc}")
 
     try:
+        if docker_client is None:
+            print("[Orchestrator] Docker SDK not available. Using Docker CLI...")
         inspect = _run_docker_cli(["inspect", "-f", "{{.State.Status}}", TTS_Container_name])
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=_docker_unavailable_detail()) from exc
@@ -148,6 +171,7 @@ def safely_pause_tts():
     """Checks if the TTS Docker container is running and pauses it to free CPU/RAM."""
     print("[Orchestrator] Ensuring TTS container is paused...")
     if docker_client is None or docker is None:
+        print("[Orchestrator] Docker SDK not available. Using Docker CLI for pausing...")
         _pause_tts_container_cli()
         return
 
