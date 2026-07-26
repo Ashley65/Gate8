@@ -7,9 +7,21 @@
     <!-- Tailwind CSS for modern aesthetics -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .loader { border: 3px solid #374151; border-bottom-color: #10b981; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
+        .loader { border: 3px solid #1f2937; border-bottom-color: #10b981; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .highlight { background-color: rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981; padding-left: 12px; transition: all 0.3s ease; }
+
+        /* Custom paragraph states */
+        .status-editing { border-left: 4px solid #f59e0b; background-color: rgba(245, 158, 11, 0.03); }
+        .status-generating { border-left: 4px solid #3b82f6; background-color: rgba(59, 130, 246, 0.03); }
+        .status-playing { border-left: 4px solid #10b981; background-color: rgba(16, 185, 129, 0.08); box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.03); }
+
+        /* Soundwave animations for active playing chunks */
+        @keyframes bar1 { 0%, 100% { height: 4px; } 50% { height: 10px; } }
+        @keyframes bar2 { 0%, 100% { height: 8px; } 50% { height: 4px; } }
+        @keyframes bar3 { 0%, 100% { height: 6px; } 50% { height: 12px; } }
+        .animate-bar1 { animation: bar1 0.8s ease-in-out infinite; }
+        .animate-bar2 { animation: bar2 0.7s ease-in-out infinite; }
+        .animate-bar3 { animation: bar3 0.9s ease-in-out infinite; }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 h-screen flex flex-col font-sans select-none">
@@ -31,7 +43,7 @@
                 <select id="modelSelect" class="bg-gray-800 border border-gray-700 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-emerald-500 text-white"></select>
             </div>
 
-            <!-- Voice Selection (Populated with your exact container voices) -->
+            <!-- Voice Selection -->
             <div class="flex items-center space-x-2">
                 <span class="text-xs text-gray-400 font-medium">Voice:</span>
                 <select id="voiceSelect" class="bg-gray-800 border border-gray-700 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-emerald-500 text-white">
@@ -84,19 +96,6 @@
                         <option value="am_v0gurney">Gurney v0 (am_v0gurney)</option>
                         <option value="am_v0michael">Michael v0 (am_v0michael)</option>
                     </optgroup>
-                    <optgroup label="Other Voices">
-                        <option value="ef_dora">Dora Spanish (ef_dora)</option>
-                        <option value="em_alex">Alex Spanish (em_alex)</option>
-                        <option value="ff_siwis">Siwis French (ff_siwis)</option>
-                        <option value="hf_alpha">Alpha Hindi (hf_alpha)</option>
-                        <option value="hf_beta">Beta Hindi (hf_beta)</option>
-                        <option value="if_sara">Sara Italian (if_sara)</option>
-                        <option value="im_nicola">Nicola Italian (im_nicola)</option>
-                        <option value="jf_alpha">Alpha Japanese (jf_alpha)</option>
-                        <option value="jm_kumo">Kumo Japanese (jm_kumo)</option>
-                        <option value="zf_xiaobei">Xiaobei Chinese (zf_xiaobei)</option>
-                        <option value="zm_yunjian">Yunjian Chinese (zm_yunjian)</option>
-                    </optgroup>
                 </select>
             </div>
 
@@ -106,7 +105,7 @@
                 <span class="text-gray-300">Clean Grammar</span>
             </label>
 
-            <!-- Play Trigger -->
+            <!-- Action Controls -->
             <div class="flex items-center gap-2">
                 <button id="playBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-1.5 rounded-lg font-bold shadow-lg transition-colors flex items-center space-x-1">
                     <span>Play Chapter</span>
@@ -117,9 +116,36 @@
                 <button id="stopBtn" class="hidden bg-red-600 hover:bg-red-500 text-white px-5 py-1.5 rounded-lg font-bold shadow-lg transition-colors">
                     <span>Stop</span>
                 </button>
+                <!-- Export to R2 -->
+                <button id="exportAudiobookBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg font-bold shadow-lg transition-colors flex items-center space-x-1" title="Generate full audiobook in background via R2">
+                    <span>📦 Export to R2</span>
+                </button>
+                <!-- R2 Storage Explorer Drawer Toggle -->
+                <button id="toggleR2ModalBtn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-lg transition-colors">
+                    🗂️ Storage List
+                </button>
             </div>
         </div>
     </header>
+
+    <!-- Live Orchestrator Telemetry Dashboard -->
+    <div id="orchestratorStatus" class="bg-gray-900 border-b border-gray-800 p-3 px-6 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-3">
+            <span class="font-mono text-gray-400">ORCHESTRATOR TELEMETRY:</span>
+            <span id="pipelineStatusPill" class="px-2 py-1 rounded bg-gray-800 text-gray-400 font-bold uppercase tracking-wider">Idle</span>
+            <span id="pipelineStatusText" class="text-gray-400">Waiting to begin narration pipeline...</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-gray-600 transition-all duration-300" id="llmStatusIndicator"></span>
+                <span class="text-gray-400 font-medium">LLM Core (Port 1234)</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-gray-600 transition-all duration-300" id="ttsStatusIndicator"></span>
+                <span class="text-gray-400 font-medium">TTS Docker Pod (Port 8880)</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Workspace -->
     <main class="flex-1 flex overflow-hidden">
@@ -127,32 +153,61 @@
         <div class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
             <div class="p-4 border-b border-gray-800 flex justify-between items-center">
                 <h2 class="font-bold text-sm uppercase tracking-wider text-gray-400">Chapters</h2>
-                <button id="addChapterBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors">
+                <button id="addChapterBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors" title="Add blank chapter">
                     <span class="text-xl leading-none">+</span>
                 </button>
             </div>
+
+            <!-- URL scraping + auto-chain -->
+            <div class="p-3 border-b border-gray-800 space-y-2 bg-gray-900/60">
+                <div class="flex gap-1">
+                    <input id="scrapeUrlInput" type="text" placeholder="Paste chapter URL…"
+                        class="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-xs rounded px-2 py-1.5 outline-none focus:border-emerald-500 text-white placeholder-gray-500">
+                    <button id="scrapeAddBtn" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs px-2.5 rounded text-emerald-400 font-bold whitespace-nowrap">
+                        Add
+                    </button>
+                </div>
+                <label class="flex items-center justify-between text-[11px] text-gray-400">
+                    <span class="flex items-center gap-1.5">
+                        <input type="checkbox" id="autoContinueToggle" class="accent-emerald-500 rounded">
+                        Auto-queue next
+                    </span>
+                    <input type="number" id="autoContinueCount" value="3" min="1" max="20"
+                        class="w-12 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-center text-white">
+                </label>
+            </div>
+
             <div id="chapterList" class="flex-1 overflow-y-auto p-2 space-y-1">
-                <!-- Chapter items will be injected here -->
+                <!-- Chapter items injected dynamically -->
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col">
+        <!-- Center Workspace -->
+        <div class="flex-1 flex flex-col relative">
             <textarea id="novelInput" class="h-1/3 bg-gray-900/30 p-4 text-gray-300 outline-none resize-none border-b border-gray-800 font-serif leading-relaxed text-base focus:bg-gray-900/50 transition-colors" placeholder="Chapter content..."></textarea>
             <div id="displayText" class="flex-1 p-8 overflow-y-auto text-lg leading-relaxed text-gray-300 font-serif space-y-6 bg-gray-950">
                 <div class="text-gray-500 italic text-center mt-12">Add a chapter and press Play to start.</div>
             </div>
+
+            <!-- Slide-over Cloudflare R2 Storage Explorer Drawer -->
+            <div id="r2Drawer" class="hidden absolute top-0 right-0 bottom-0 w-80 bg-gray-900 border-l border-gray-800 p-4 flex flex-col z-20 shadow-2xl">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-lg">🗂️</span>
+                        <h3 class="font-bold text-sm text-white">Cloudflare R2 Storage</h3>
+                    </div>
+                    <button id="closeR2DrawerBtn" class="text-gray-400 hover:text-white font-bold text-sm">&times;</button>
+                </div>
+                <div class="py-2 flex justify-between items-center text-xs text-gray-400">
+                    <span id="r2BucketName">Bucket: audio-cacha</span>
+                    <button id="refreshR2ListBtn" class="text-emerald-400 hover:underline">Refresh</button>
+                </div>
+                <div id="r2FileList" class="flex-1 overflow-y-auto space-y-2 mt-2">
+                    <div class="text-xs text-gray-500 italic text-center py-4">Click Refresh to inspect R2 files...</div>
+                </div>
+            </div>
         </div>
     </main>
-
-    <!-- Processing Overlay -->
-    <div id="processingOverlay" class="hidden fixed inset-0 bg-gray-950/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 transition-all duration-300">
-        <div class="loader w-12 h-12 mb-4"></div>
-        <h3 id="overlayTitle" class="text-xl font-bold text-white tracking-wide">Processing Novel</h3>
-        <p id="overlaySubtitle" class="text-sm text-gray-400 mt-2">Initializing...</p>
-        <div class="w-64 bg-gray-800 rounded-full h-2 mt-6 overflow-hidden">
-            <div id="overlayProgressBar" class="bg-emerald-500 h-2 w-0 transition-all duration-300"></div>
-        </div>
-    </div>
 
     <!-- Hidden audio element -->
     <audio id="audioPlayer" class="hidden"></audio>
@@ -162,12 +217,12 @@
         const BASE_URL = window.location.origin;
         let chapters = [];
         let currentChapterIndex = 0;
-        let playingChapterIndex = -1; // -1 means nothing is playing
+        let playingChapterIndex = -1;
         let isPlaying = false;
         let isPaused = false;
         let abortController = null;
+        let currentSessionId = 0;
 
-        // Initialize with one chapter
         addChapter();
 
         function addChapter() {
@@ -179,13 +234,64 @@
                 chunks: [],
                 audioQueue: new Map(),
                 currentIndex: 0,
-                status: 'pending', // pending, processing, ready, playing, completed
-                abortController: new AbortController()
+                status: 'pending',
+                sourceUrl: '',
+                nextUrl: ''
             };
             chapters.push(chapter);
             renderChapterList();
             if (chapters.length === 1) {
                 selectChapter(0);
+            }
+        }
+
+        async function scrapeAndAddChapter(url, chainRemaining = 0) {
+            if (!url) return;
+
+            const chapter = {
+                id: Date.now() + Math.random(),
+                title: 'Fetching…',
+                content: "",
+                chunks: [],
+                audioQueue: new Map(),
+                currentIndex: 0,
+                status: 'scraping',
+                sourceUrl: url,
+                nextUrl: ''
+            };
+            chapters.push(chapter);
+            const newIndex = chapters.length - 1;
+            renderChapterList();
+            if (chapters.length === 1) selectChapter(newIndex);
+
+            try {
+                const resp = await fetch(`${BASE_URL}/scrape`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                if (!resp.ok) throw new Error('Scrape request failed');
+                const data = await resp.json();
+
+                chapter.title = data.title || `Chapter ${newIndex + 1}`;
+                chapter.content = (data.paragraphs || []).join('\n\n');
+                chapter.nextUrl = data.next_url || '';
+                chapter.status = 'pending';
+
+                if (newIndex === currentChapterIndex) {
+                    document.getElementById('novelInput').value = chapter.content;
+                    renderChapterDisplay(newIndex);
+                }
+                renderChapterList();
+
+                if (chainRemaining > 0 && chapter.nextUrl) {
+                    await scrapeAndAddChapter(chapter.nextUrl, chainRemaining - 1);
+                }
+            } catch (e) {
+                console.error('Scrape error:', e);
+                chapter.title = 'Scrape failed — click to retry';
+                chapter.status = 'pending';
+                renderChapterList();
             }
         }
 
@@ -206,6 +312,7 @@
 
         function getStatusClass(status) {
             switch(status) {
+                case 'scraping': return 'text-cyan-400 animate-pulse';
                 case 'processing': return 'text-amber-500';
                 case 'ready': return 'text-emerald-500';
                 case 'playing': return 'text-blue-500 font-bold';
@@ -214,17 +321,56 @@
             }
         }
 
+        function updatePipelineStatus(statusLabel, description, activeSystem) {
+            const statusPill = document.getElementById('pipelineStatusPill');
+            const statusText = document.getElementById('pipelineStatusText');
+            const llmIndicator = document.getElementById('llmStatusIndicator');
+            const ttsIndicator = document.getElementById('ttsStatusIndicator');
+
+            if (statusPill) statusPill.textContent = statusLabel;
+            if (statusText) statusText.textContent = description;
+
+            if (statusPill) {
+                statusPill.className = 'px-2 py-1 rounded font-bold uppercase tracking-wider text-[10px] animate-pulse';
+                if (activeSystem === 'llm') {
+                    statusPill.classList.add('bg-amber-950', 'text-amber-400');
+                } else if (activeSystem === 'tts') {
+                    statusPill.classList.add('bg-blue-950', 'text-blue-400');
+                } else if (activeSystem === 'idle') {
+                    statusPill.classList.add('bg-emerald-950', 'text-emerald-400');
+                    statusPill.classList.remove('animate-pulse');
+                } else {
+                    statusPill.classList.add('bg-gray-800', 'text-gray-400');
+                    statusPill.classList.remove('animate-pulse');
+                }
+            }
+
+            if (llmIndicator && ttsIndicator) {
+                llmIndicator.className = 'w-2.5 h-2.5 rounded-full transition-all duration-300';
+                ttsIndicator.className = 'w-2.5 h-2.5 rounded-full transition-all duration-300';
+
+                if (activeSystem === 'llm') {
+                    llmIndicator.classList.add('bg-amber-500', 'shadow-[0_0_8px_#f59e0b]');
+                    ttsIndicator.classList.add('bg-gray-700');
+                } else if (activeSystem === 'tts') {
+                    llmIndicator.classList.add('bg-gray-700');
+                    ttsIndicator.classList.add('bg-blue-500', 'shadow-[0_0_8px_#3b82f6]');
+                } else {
+                    llmIndicator.classList.add('bg-gray-600');
+                    ttsIndicator.classList.add('bg-gray-600');
+                }
+            }
+        }
+
         function selectChapter(index) {
-            // Save current textarea content to previous chapter
-            if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length) {
+            if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length && chapters[currentChapterIndex]) {
                 chapters[currentChapterIndex].content = document.getElementById('novelInput').value;
             }
-            
+
             currentChapterIndex = index;
             const chapter = chapters[index];
             document.getElementById('novelInput').value = chapter.content;
-            
-            // If it's playing or completed, show the chunks, else show placeholder or raw content
+
             renderChapterDisplay(index);
             renderChapterList();
         }
@@ -232,29 +378,105 @@
         function renderChapterDisplay(index) {
             const display = document.getElementById('displayText');
             const chapter = chapters[index];
-            
+
             if (chapter.chunks.length > 0) {
-                display.innerHTML = chapter.chunks.map((chunk, i) => `
-                    <p id="chunk-${index}-${i}" class="py-2 px-3 rounded-lg border border-transparent transition-all duration-300 ${i < chapter.currentIndex ? 'text-gray-500' : (index === playingChapterIndex && i === chapter.currentIndex ? 'highlight' : '')}">
-                        ${chunk}
-                    </p>
-                `).join("");
-                
-                // Scroll to active chunk if playing
+                display.innerHTML = chapter.chunks.map((chunk, i) => {
+                    let statusClass = '';
+                    if (i < chapter.currentIndex) {
+                        statusClass = 'text-gray-500 opacity-60';
+                    } else if (index === playingChapterIndex && i === chapter.currentIndex) {
+                        statusClass = 'status-playing';
+                    }
+
+                    return `
+                        <div id="chunk-${index}-${i}" class="group relative py-3 px-4 rounded-lg border border-transparent transition-all duration-300 ${statusClass}">
+                            <div class="flex items-start justify-between space-x-3">
+                                <p class="chunk-text flex-1">${chunk}</p>
+                                <div class="chunk-badge flex-shrink-0 self-center text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-gray-500">
+                                    Pending
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+
+                for(let i=0; i<chapter.chunks.length; i++) {
+                    if (chapter.audioQueue.has(i)) {
+                        setChunkVisualState(index, i, 'buffered');
+                    }
+                }
+
                 if (index === playingChapterIndex) {
                     const active = document.getElementById(`chunk-${index}-${chapter.currentIndex}`);
                     if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             } else {
-                display.innerHTML = `<div class="text-gray-500 italic text-center mt-12">${chapter.content ? "Press Play to process and start narration." : "Enter content in the box above."}</div>`;
+                display.innerHTML = `<div class="text-gray-500 italic text-center mt-12">${chapter.content ? "Press Play to process and start narration." : "Enter content in the box above, or add a chapter from a URL."}</div>`;
+            }
+        }
+
+        function setChunkVisualState(chIndex, chkIndex, state, stateMsg = "") {
+            if (chIndex !== currentChapterIndex) return;
+            const el = document.getElementById(`chunk-${chIndex}-${chkIndex}`);
+            if (!el) return;
+            const badge = el.querySelector('.chunk-badge');
+            el.classList.remove('status-editing', 'status-generating', 'status-playing');
+
+            switch(state) {
+                case 'editing':
+                    el.classList.add('status-editing');
+                    if (badge) {
+                        badge.textContent = 'Editing';
+                        badge.className = 'chunk-badge px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30 text-amber-400 text-[10px] font-bold tracking-wider animate-pulse';
+                    }
+                    break;
+                case 'edited':
+                    if (badge) {
+                        badge.textContent = 'Cleaned';
+                        badge.className = 'chunk-badge px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wider';
+                    }
+                    break;
+                case 'generating':
+                    el.classList.add('status-generating');
+                    if (badge) {
+                        badge.textContent = 'Generating Voice';
+                        badge.className = 'chunk-badge px-2 py-0.5 rounded bg-blue-950/40 border border-blue-500/30 text-blue-400 text-[10px] font-bold tracking-wider animate-pulse';
+                    }
+                    break;
+                case 'buffered':
+                    if (badge) {
+                        badge.innerHTML = `<span class="flex items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ready</span>`;
+                        badge.className = 'chunk-badge px-2 py-0.5 rounded bg-emerald-950/20 border border-emerald-500/10 text-emerald-400';
+                    }
+                    break;
+                case 'playing':
+                    el.classList.add('status-playing');
+                    if (badge) {
+                        badge.innerHTML = `<span class="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-emerald-400"><span class="flex gap-0.5 items-end h-2 w-2.5"><span class="bg-emerald-400 w-0.5 h-1 animate-bar1"></span><span class="bg-emerald-400 w-0.5 h-2 animate-bar2"></span><span class="bg-emerald-400 w-0.5 h-1.5 animate-bar3"></span></span> Playing</span>`;
+                        badge.className = 'chunk-badge px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-400';
+                    }
+                    break;
+                case 'failed':
+                    if (badge) {
+                        const errorText = stateMsg || 'Error';
+                        badge.textContent = errorText.length > 30 ? errorText.substring(0, 30) + '...' : errorText;
+                        badge.title = errorText;
+                        badge.className = 'chunk-badge px-2 py-0.5 rounded bg-red-950/40 border border-red-500/30 text-red-400 text-[10px] font-bold tracking-wider cursor-help';
+                    }
+                    break;
             }
         }
 
         function deleteChapter(index) {
-            if (index === playingChapterIndex) {
-                stopPlayback();
-            }
+            if (index === playingChapterIndex) stopPlayback();
+
+            const isDeletingCurrent = (index === currentChapterIndex);
             chapters.splice(index, 1);
+
+            if (isDeletingCurrent) {
+                document.getElementById('novelInput').value = "";
+            }
+
             if (currentChapterIndex >= chapters.length) {
                 currentChapterIndex = chapters.length - 1;
             }
@@ -262,26 +484,21 @@
             if (chapters.length > 0) selectChapter(currentChapterIndex);
         }
 
-        // 1. Fetch Models dynamically
         async function loadModels() {
             try {
-                const resp = await fetch(`${BASE_URL}/v1/chat/completions`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ messages: [] })
-                });
-
-                // Allow status 400 through since Gate8 uses it to dynamically return available_models
-                if (!resp.ok && resp.status !== 400) {
-                    throw new Error("Gateway is currently offline");
-                }
+                const resp = await fetch(`${BASE_URL}/v1/models`);
+                if (!resp.ok) throw new Error("Gateway is currently offline");
 
                 const data = await resp.json();
                 const select = document.getElementById('modelSelect');
-                select.innerHTML = ""; // Clear loading state
+                select.innerHTML = "";
 
-                if (data.available_models && data.available_models.length > 0) {
-                    data.available_models.forEach(m => {
+                const models = (data.data || data.available_models || [])
+                    .map(m => typeof m === 'string' ? m : m.id)
+                    .filter(Boolean);
+
+                if (models.length > 0) {
+                    models.forEach(m => {
                         const opt = document.createElement('option');
                         opt.value = m;
                         opt.textContent = m;
@@ -296,7 +513,6 @@
             }
         }
 
-        // 2. Intelligent Chunking: Combines short lines
         function createChunks(text) {
             const paragraphs = text.split(/\n\n+/);
             const result = [];
@@ -304,8 +520,7 @@
             for (let p of paragraphs) {
                 p = p.trim();
                 if (!p) continue;
-                // Target roughly 2000 characters to reduce API overhead and make it feel more "continuous"
-                if (current.length + p.length < 2000) {
+                if (current.length + p.length < 400) {
                     current += (current ? "\n\n" : "") + p;
                 } else {
                     result.push(current);
@@ -316,123 +531,173 @@
             return result;
         }
 
-        // 3. Batch Orchestrator Entrypoint
+        function sanitizeForTTS(text) {
+            return text
+                .replace(/[*_~^|#]/g, "")
+                .replace(/([a-zA-Z])\.\d+/g, "$1.")
+                .replace(/([a-zA-Z])\d+/g, "$1")
+                .replace(/\.{2,}/g, "...")
+                .replace(/[\[\]\(\)]/g, "")
+                .trim();
+        }
+
         async function start() {
             if (isPlaying) return;
 
-            // Save current content
             if (currentChapterIndex >= 0) {
                 chapters[currentChapterIndex].content = document.getElementById('novelInput').value.trim();
             }
 
-            if (chapters.length === 0 || !chapters[0].content) return;
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+            audioPlayer.play().catch(() => {});
+            audioPlayer.pause();
+
+            const pendingIndices = chapters
+                .map((c, i) => i)
+                .filter(i => chapters[i].content && chapters[i].status !== 'completed' && chapters[i].status !== 'scraping');
+
+            if (pendingIndices.length === 0) return;
 
             isPlaying = true;
             isPaused = false;
-            playingChapterIndex = 0;
-            if (chapters[playingChapterIndex].status === 'completed') {
-                // Find first non-completed chapter
-                const next = chapters.findIndex(c => c.status !== 'completed');
-                if (next !== -1) playingChapterIndex = next;
-            }
+            const sessionId = ++currentSessionId;
+            playingChapterIndex = pendingIndices[0];
+
             abortController = new AbortController();
-
             updateUIState();
-            
-            // Start processing all chapters sequentially in the background
-            processChapters();
-            
-            // Start playback
-            playNext();
+
+            runPipeline(pendingIndices, sessionId);
         }
 
-        async function processChapters() {
-            for (let i = 0; i < chapters.length; i++) {
-                if (!isPlaying) break;
-                if (chapters[i].status === 'completed' || chapters[i].status === 'ready' || chapters[i].status === 'processing') continue;
-                
-                await processChapter(i);
+        async function runPipeline(indices, sessionId) {
+            const useGrammar = document.getElementById('grammarToggle').checked;
+
+            for (const idx of indices) {
+                const chapter = chapters[idx];
+                chapter.chunks = createChunks(chapter.content);
+                chapter.status = 'processing';
+            }
+            renderChapterList();
+            if (indices.includes(currentChapterIndex)) renderChapterDisplay(currentChapterIndex);
+
+            if (useGrammar) {
+                updatePipelineStatus('LLM Active', `Polishing grammar across ${indices.length} chapter(s)...`, 'llm');
+                for (const idx of indices) {
+                    if (!isPlaying || sessionId !== currentSessionId) return;
+                    await grammarPhase(idx, sessionId);
+                }
+            }
+
+            if (isPlaying && sessionId === currentSessionId) {
+                updatePipelineStatus('TTS Active', 'Unloading LLM & warming up Docker TTS engine...', 'tts');
+                for (const idx of indices) {
+                    if (!isPlaying || sessionId !== currentSessionId) return;
+                    await ttsPhase(idx, sessionId);
+                    if (chapters[idx].status !== 'playing' && chapters[idx].status !== 'completed') {
+                        chapters[idx].status = 'ready';
+                    }
+                    renderChapterList();
+                }
+            }
+
+            if (sessionId === currentSessionId) {
+                updatePipelineStatus('Idle', 'Chapter voice queue is active.', 'idle');
             }
         }
 
-        async function processChapter(index) {
+        async function grammarPhase(index, sessionId) {
             const chapter = chapters[index];
-            if (!chapter.content) return;
-
-            chapter.status = 'processing';
-            renderChapterList();
-
-            const useGrammar = document.getElementById('grammarToggle').checked;
             const chosenModel = document.getElementById('modelSelect').value;
-            const voiceSelect = document.getElementById('voiceSelect').value;
-
-            chapter.chunks = createChunks(chapter.content);
-            if (index === currentChapterIndex) renderChapterDisplay(index);
 
             for (let i = 0; i < chapter.chunks.length; i++) {
-                if (!isPlaying) break;
+                if (!isPlaying || sessionId !== currentSessionId) return;
 
-                if (useGrammar) {
-                    try {
-                        const resp = await fetch(`${BASE_URL}/v1/chat/completions`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                model: chosenModel,
-                                messages: [{"role": "user", "content": `Clean, polish and fix grammar for this web novel segment. Only return the corrected text, no preambles, notes or conversational text:\n\n${chapter.chunks[i]}`}]
-                            }),
-                            signal: abortController.signal
-                        });
-                        const data = await resp.json();
+                setChunkVisualState(index, i, 'editing');
+
+                try {
+                    const resp = await fetch(`${BASE_URL}/v1/chat/completions`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            model: chosenModel,
+                            messages: [
+                                {"role": "system", "content": "You are a professional editor. Correct the grammar and improve the flow of the text provided. Return ONLY the corrected text. No explanations, no preambles, no conversational filler."},
+                                {"role": "user", "content": chapter.chunks[i]}
+                            ]
+                        }),
+                        signal: abortController.signal
+                    });
+                    const data = await resp.json();
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
                         chapter.chunks[i] = data.choices[0].message.content.trim();
-                        if (index === currentChapterIndex) renderChapterDisplay(index);
-                    } catch (e) {
-                        if (e.name === 'AbortError') return;
-                        console.error("Grammar fix failed for chapter", index, "chunk", i, e);
+                        setChunkVisualState(index, i, 'edited');
+                        if (index === currentChapterIndex) {
+                            const el = document.getElementById(`chunk-${index}-${i}`);
+                            if (el) el.querySelector('.chunk-text').textContent = chapter.chunks[i];
+                        }
                     }
+                } catch (e) {
+                    if (e.name === 'AbortError' || sessionId !== currentSessionId) return;
+                    console.error("Grammar fix failed for chapter", index, "chunk", i, e);
+                    setChunkVisualState(index, i, 'failed');
                 }
-
-                // Start playback if this is the first chunk of the first chapter
-                if (index === 0 && i === 0 && isPlaying && !isPaused && document.getElementById('audioPlayer').paused) {
-                    playNext();
-                }
-
-                // Prefetch audio
-                fetchAudio(index, i);
             }
-            
-            chapter.status = 'ready';
-            renderChapterList();
         }
 
-        async function fetchAudio(chapterIndex, chunkIndex) {
+        async function ttsPhase(index, sessionId) {
+            const chapter = chapters[index];
+
+            if (playingChapterIndex === index) {
+                playNext(sessionId);
+            }
+
+            for (let i = 0; i < chapter.chunks.length; i++) {
+                if (!isPlaying || sessionId !== currentSessionId) break;
+                setChunkVisualState(index, i, 'generating');
+                await fetchAudio(index, i, sessionId);
+            }
+        }
+
+        async function fetchAudio(chapterIndex, chunkIndex, sessionId) {
             const chapter = chapters[chapterIndex];
             if (chapter.audioQueue.has(chunkIndex)) return;
-            
+
             const voiceSelect = document.getElementById('voiceSelect').value;
+            const cleanText = sanitizeForTTS(chapter.chunks[chunkIndex]);
             try {
                 const resp = await fetch(`${BASE_URL}/v1/audio/speech`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        input: chapter.chunks[chunkIndex],
+                        input: cleanText,
                         voice: voiceSelect
                     }),
                     signal: abortController.signal
                 });
 
-                if (!resp.ok) throw new Error("Audio generation failed");
+                if (!resp.ok) {
+                    let errorDetail = "Audio generation failed";
+                    try {
+                        const errData = await resp.json();
+                        if (errData.detail) errorDetail = errData.detail;
+                    } catch(err) {}
+                    throw new Error(errorDetail);
+                }
 
                 const blob = await resp.blob();
-                chapter.audioQueue.set(chunkIndex, URL.createObjectURL(blob));
+                if (sessionId !== currentSessionId) return;
 
-                // If we were waiting for this chunk to play, trigger it
-                if (isPlaying && !isPaused && playingChapterIndex === chapterIndex && chapter.currentIndex === chunkIndex && document.getElementById('audioPlayer').paused) {
-                    playNext();
+                chapter.audioQueue.set(chunkIndex, URL.createObjectURL(blob));
+                setChunkVisualState(chapterIndex, chunkIndex, 'buffered');
+
+                if (isPlaying && !isPaused && sessionId === currentSessionId && playingChapterIndex === chapterIndex && chapter.currentIndex === chunkIndex && document.getElementById('audioPlayer').paused) {
+                    playNext(sessionId);
                 }
             } catch (e) {
-                if (e.name === 'AbortError') return;
-                console.error("Audio step error:", e);
+                if (e.name === 'AbortError' || sessionId !== currentSessionId) return;
+                console.error("Audio generation error:", e);
+                setChunkVisualState(chapterIndex, chunkIndex, 'failed', e.message);
             }
         }
 
@@ -457,10 +722,16 @@
             const audioPlayer = document.getElementById('audioPlayer');
             if (isPaused) {
                 isPaused = false;
-                audioPlayer.play();
+                if (!audioPlayer.src || audioPlayer.src.includes('data:audio/wav')) {
+                    playNext(currentSessionId);
+                } else {
+                    audioPlayer.play().catch(e => console.error("Resume failed", e));
+                }
+                updatePipelineStatus('TTS Active', 'Narrating chapter...', 'tts');
             } else {
                 isPaused = true;
                 audioPlayer.pause();
+                updatePipelineStatus('Idle', 'Narration paused.', 'idle');
             }
             updateUIState();
         }
@@ -469,41 +740,48 @@
             isPlaying = false;
             isPaused = false;
             playingChapterIndex = -1;
-            if (abortController) abortController.abort();
+            currentSessionId++;
+
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+
             const audioPlayer = document.getElementById('audioPlayer');
             audioPlayer.pause();
             audioPlayer.src = "";
-            
+            audioPlayer.onended = null;
+
             chapters.forEach(ch => {
                 ch.audioQueue.forEach(url => URL.revokeObjectURL(url));
                 ch.audioQueue.clear();
-                ch.status = 'pending';
+                ch.status = (ch.status !== 'completed' && ch.status !== 'scraping') ? 'pending' : ch.status;
                 ch.currentIndex = 0;
             });
-            
+
             updateUIState();
+            updatePipelineStatus('Idle', 'Pipeline cleared.', 'idle');
             renderChapterList();
             renderChapterDisplay(currentChapterIndex);
         }
 
-        // 4. Sequential Narrator Playback
-        async function playNext() {
-            if (!isPlaying || isPaused) return;
+        async function playNext(sessionId) {
+            if (!isPlaying || isPaused || sessionId !== currentSessionId) return;
 
-            if (playingChapterIndex >= chapters.length) {
+            if (playingChapterIndex < 0 || playingChapterIndex >= chapters.length) {
                 stopPlayback();
                 return;
             }
 
             const chapter = chapters[playingChapterIndex];
-            
+
             if (chapter.currentIndex >= chapter.chunks.length) {
                 chapter.status = 'completed';
                 playingChapterIndex++;
                 if (playingChapterIndex < chapters.length) {
                     chapters[playingChapterIndex].status = 'playing';
                     renderChapterList();
-                    playNext();
+                    playNext(sessionId);
                 } else {
                     stopPlayback();
                 }
@@ -518,34 +796,175 @@
             if (chapter.audioQueue.has(chapter.currentIndex)) {
                 if (playingChapterIndex === currentChapterIndex) {
                     renderChapterDisplay(playingChapterIndex);
+                    setChunkVisualState(playingChapterIndex, chapter.currentIndex, 'playing');
                 }
 
                 audioPlayer.src = chapter.audioQueue.get(chapter.currentIndex);
-                audioPlayer.play();
+                audioPlayer.play().catch(e => console.error("Playback failed:", e));
 
                 audioPlayer.onended = () => {
+                    if (sessionId !== currentSessionId) return;
                     URL.revokeObjectURL(chapter.audioQueue.get(chapter.currentIndex));
                     chapter.audioQueue.delete(chapter.currentIndex);
                     chapter.currentIndex++;
-                    playNext();
+                    playNext(sessionId);
                 };
             } else {
-                // Wait for audio
                 if (playingChapterIndex === currentChapterIndex) {
                     const activeParagraph = document.getElementById(`chunk-${playingChapterIndex}-${chapter.currentIndex}`);
                     if (activeParagraph) {
-                        activeParagraph.textContent = "Loading audio...";
+                        const badge = activeParagraph.querySelector('.chunk-badge');
+                        if (badge) {
+                            badge.textContent = 'Buffering Voice...';
+                            badge.className = 'chunk-badge px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30 text-amber-400 text-[10px] font-bold tracking-wider animate-pulse';
+                        }
                     }
                 }
             }
         }
 
+        /* --- EXPORT TO R2 BACKGROUND TASK INTEGRATION --- */
+        document.getElementById('exportAudiobookBtn').onclick = async () => {
+            if (chapters.length === 0) {
+                alert("Please add at least one chapter before exporting!");
+                return;
+            }
+
+            const currentChapter = chapters[currentChapterIndex];
+            const chunks = createChunks(currentChapter.content);
+
+            if (chunks.length === 0) {
+                alert("Selected chapter has no content to render.");
+                return;
+            }
+
+            updatePipelineStatus('R2 Task', 'Dispatching audiobook generation to background...', 'tts');
+
+            try {
+                const response = await fetch(`${BASE_URL}/v1/audiobook/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        book_id: "novel_export",
+                        chapter_id: `chap_${currentChapterIndex + 1}`,
+                        text_chunks: chunks,
+                        voice: document.getElementById('voiceSelect').value
+                    })
+                });
+
+                if (!response.ok) throw new Error("Failed to queue background job");
+
+                const data = await response.json();
+                const jobId = data.job_id;
+
+                alert(`Background Job Started!\nJob ID: ${jobId}\nYou can safely leave or close this tab while R2 generates the file.`);
+                pollAudiobookStatus(jobId);
+
+            } catch (e) {
+                console.error("Audiobook Export Error:", e);
+                updatePipelineStatus('Failed', 'Could not queue background export.', 'idle');
+            }
+        };
+
+        async function pollAudiobookStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/v1/audiobook/status/${jobId}`);
+                    if (!res.ok) return;
+
+                    const data = await res.json();
+
+                    if (data.status === 'processing') {
+                        updatePipelineStatus('R2 Processing', `Generating Audiobook... ${data.progress}%`, 'tts');
+                    } else if (data.status === 'completed') {
+                        clearInterval(interval);
+                        updatePipelineStatus('Complete', 'Audiobook uploaded to R2!', 'idle');
+
+                        // Trigger automatic file download via presigned URL
+                        const link = document.createElement('a');
+                        link.href = data.download_url;
+                        link.download = `${jobId}.wav`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        // Auto-refresh R2 explorer drawer if visible
+                        fetchR2StorageList();
+                    }
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }, 5000);
+        }
+
+        /* --- CLOUDFLARE R2 STORAGE EXPLORER DRAWER --- */
+        const r2Drawer = document.getElementById('r2Drawer');
+        document.getElementById('toggleR2ModalBtn').onclick = () => {
+            r2Drawer.classList.toggle('hidden');
+            if (!r2Drawer.classList.contains('hidden')) {
+                fetchR2StorageList();
+            }
+        };
+        document.getElementById('closeR2DrawerBtn').onclick = () => {
+            r2Drawer.classList.add('hidden');
+        };
+        document.getElementById('refreshR2ListBtn').onclick = fetchR2StorageList;
+
+        async function fetchR2StorageList() {
+            const listEl = document.getElementById('r2FileList');
+            listEl.innerHTML = '<div class="text-xs text-gray-500 italic text-center py-4 animate-pulse">Querying R2 bucket...</div>';
+
+            try {
+                const res = await fetch(`${BASE_URL}/v1/storage/list`);
+                if (!res.ok) throw new Error("Storage endpoint unreachable");
+
+                const data = await res.json();
+                document.getElementById('r2BucketName').textContent = `Bucket: ${data.bucket || 'audio-cacha'}`;
+
+                if (!data.files || data.files.length === 0) {
+                    listEl.innerHTML = '<div class="text-xs text-gray-500 italic text-center py-4">No audio files currently buffered in R2.</div>';
+                    return;
+                }
+
+                listEl.innerHTML = data.files.map(filename => `
+                    <div class="bg-gray-800/80 border border-gray-700/60 rounded p-2.5 flex flex-col space-y-1">
+                        <span class="text-xs font-mono text-emerald-400 truncate">${filename}</span>
+                        <div class="flex items-center justify-between pt-1">
+                            <a href="${BASE_URL}/v1/storage/download/${encodeURIComponent(filename)}" download
+                               class="text-[11px] bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded hover:bg-emerald-900/50 transition-colors">
+                                ⬇ Download
+                            </a>
+                            <span class="text-[10px] text-gray-500 font-mono">24h Auto-Expiry</span>
+                        </div>
+                    </div>
+                `).join("");
+
+            } catch (e) {
+                console.error("Failed to query R2 storage list:", e);
+                listEl.innerHTML = '<div class="text-xs text-red-400 italic text-center py-4">Failed to fetch R2 object list.</div>';
+            }
+        }
+
+        // Attach Event Listeners
         document.getElementById('playBtn').onclick = start;
         document.getElementById('pauseBtn').onclick = togglePause;
         document.getElementById('stopBtn').onclick = stopPlayback;
         document.getElementById('addChapterBtn').onclick = addChapter;
+
+        document.getElementById('scrapeAddBtn').onclick = () => {
+            const urlField = document.getElementById('scrapeUrlInput');
+            const url = urlField.value.trim();
+            if (!url) return;
+            const autoOn = document.getElementById('autoContinueToggle').checked;
+            const count = autoOn ? Math.max(0, parseInt(document.getElementById('autoContinueCount').value, 10) || 0) : 0;
+            scrapeAndAddChapter(url, count);
+            urlField.value = '';
+        };
+        document.getElementById('scrapeUrlInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('scrapeAddBtn').click();
+        });
+
         loadModels();
     </script>
-
 </body>
 </html>
