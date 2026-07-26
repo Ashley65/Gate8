@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gate8 Platform Hub - Private Multi-Tier AI Execution & Media Platform.">
+    <title>Gate8 Hub | AI Execution Platform</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+
+    <style>
+        .hub-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            overflow-y: auto;
+            height: 100vh;
+        }
+
+        .hub-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 36px;
+        }
+
+        .hub-title-group h1 {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hub-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .service-card {
+            background: var(--bg-glass-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            backdrop-filter: blur(16px);
+            transition: all var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-decoration: none;
+            color: inherit;
+        }
+        .service-card:hover {
+            border-color: var(--border-highlight);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 242, 254, 0.15);
+        }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .icon-chat-bg { background: rgba(0, 242, 254, 0.1); color: var(--accent-cyan); }
+        .icon-reader-bg { background: rgba(127, 0, 255, 0.1); color: var(--accent-purple); }
+        .icon-r2-bg { background: rgba(255, 170, 0, 0.1); color: var(--accent-amber); }
+
+        .card-badge {
+            font-size: 0.72rem;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .card-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .card-footer-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .telemetry-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            margin-bottom: 40px;
+        }
+
+        .telemetry-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-glass-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .metric-val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: var(--font-display);
+        }
+    </style>
+</head>
+<body class="dark-theme">
+    <div class="hub-container scrollable">
+        <!-- Hub Header -->
+        <header class="hub-header">
+            <div class="brand-logo">
+                <div class="logo-icon"><i class="fa-solid fa-bolt-lightning"></i></div>
+                <div class="hub-title-group">
+                    <h1>GATE8 SYSTEM HUB</h1>
+                    <div class="hub-subtitle">Private Multi-Tier AI Execution & Media Platform</div>
+                </div>
+            </div>
+            
+            <div class="status-pill edge-pill">
+                <span class="dot pulse"></span>
+                <span>FastAPI Local Tunnel Active (Port 8000)</span>
+            </div>
+        </header>
+
+        <!-- Main Service Hub Cards -->
+        <div class="services-grid">
+            <!-- Gemini & Claude AI Chat Interface -->
+            <a href="chat.html" class="service-card">
+                <div>
+                    <div class="card-top">
+                        <div class="card-icon icon-chat-bg"><i class="fa-solid fa-comments"></i></div>
+                        <span class="card-badge">LM Studio 1234</span>
+                    </div>
+                    <div class="card-title">AI Chat Engine</div>
+                    <div class="card-desc">Gemini & Claude-inspired conversational interface. Polish novel dialogue, ask story questions, and trigger Kokoro TTS voice responses.</div>
+                </div>
+                <div class="card-footer-link">Launch AI Chat <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+            <!-- Batch Novel Reader UI -->
+            <a href="WebNovelReader.html" class="service-card">
+                <div>
+                    <div class="card-top">
+                        <div class="card-icon icon-reader-bg"><i class="fa-solid fa-book-open"></i></div>
+                        <span class="card-badge">Kokoro TTS 8880</span>
+                    </div>
+                    <div class="card-title">Batch Novel Reader</div>
+                    <div class="card-desc">Multi-chapter URL scraper with auto-chaining narration queue, live pipeline telemetry monitor, and sliding R2 storage drawer.</div>
+                </div>
+                <div class="card-footer-link">Open Batch Reader <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+
+            <!-- R2 Storage Explorer -->
+            <a href="WebNovelReader.html#r2-drawer" class="service-card">
+                <div>
+                    <div class="card-top">
+                        <div class="card-icon icon-r2-bg"><i class="fa-solid fa-box-archive"></i></div>
+                        <span class="card-badge">Cloudflare R2</span>
+                    </div>
+                    <div class="card-title">R2 Audio Explorer</div>
+                    <div class="card-desc">Inspect generated .wav audiobooks stored in `audio-cacha` bucket. Automatic 24-hour lifecycle deletion preview & CDN links.</div>
+                </div>
+                <div class="card-footer-link">Explore Storage <i class="fa-solid fa-arrow-right"></i></div>
+            </a>
+        </div>
+
+        <!-- Live Telemetry Monitor -->
+        <div class="telemetry-section">
+            <div class="telemetry-header">
+                <h3><i class="fa-solid fa-chart-line icon-accent"></i> Live Pipeline Telemetry</h3>
+                <span class="status-indicator online"></span>
+            </div>
+            <div class="telemetry-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Mac Mini Unified RAM</div>
+                    <div class="metric-val" style="color: var(--accent-cyan);">2.2 GB / 8.0 GB</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">LM Studio Model</div>
+                    <div class="metric-val" style="font-size: 1.05rem; color: var(--accent-cyan);">Llama-3.2-3B-Instruct (Q4)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">8GB Sequential Guard</div>
+                    <div class="metric-val" style="color: var(--accent-emerald); font-size: 1.05rem;">Active (Auto-Unload)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Edge Latency</div>
+                    <div class="metric-val">18 ms (dry-disk-4c9d)</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

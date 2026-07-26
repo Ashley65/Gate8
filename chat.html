@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gate8 AI Platform - Gemini & Claude-inspired conversational interface integrated with LM Studio and Kokoro TTS.">
+    <title>Gate8 AI Chat | Gemini & Claude Engine</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme chat-page">
+    <div class="app-layout">
+        <!-- Sidebar Navigation & Chat History -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <div class="logo-icon">
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">GATE<span class="highlight">8</span></span>
+                        <span class="brand-subtitle">AI EXECUTION HUB</span>
+                    </div>
+                </div>
+                <button class="icon-btn close-sidebar-btn" id="closeSidebarBtn" title="Close Sidebar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="btn btn-primary new-chat-btn" id="newChatBtn">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>New Chat</span>
+                    <span class="kbd-shortcut">Ctrl+K</span>
+                </button>
+            </div>
+
+            <!-- Chat History Groups -->
+            <div class="chat-history-container scrollable">
+                <div class="history-group">
+                    <div class="group-title">Today</div>
+                    <ul class="history-list" id="historyToday">
+                        <li class="history-item active">
+                            <i class="fa-regular fa-message"></i>
+                            <span class="history-text">Web Novel Dialogue Polish & Synth</span>
+                            <div class="history-actions">
+                                <button class="mini-icon-btn" title="Rename"><i class="fa-solid fa-pen"></i></button>
+                                <button class="mini-icon-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </li>
+                        <li class="history-item">
+                            <i class="fa-regular fa-message"></i>
+                            <span class="history-text">Chapter 14 Character Motivation</span>
+                            <div class="history-actions">
+                                <button class="mini-icon-btn" title="Rename"><i class="fa-solid fa-pen"></i></button>
+                                <button class="mini-icon-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="history-group">
+                    <div class="group-title">Previous 7 Days</div>
+                    <ul class="history-list" id="historyPast">
+                        <li class="history-item">
+                            <i class="fa-regular fa-message"></i>
+                            <span class="history-text">Audiobook Narration Style Guide</span>
+                            <div class="history-actions">
+                                <button class="mini-icon-btn" title="Rename"><i class="fa-solid fa-pen"></i></button>
+                                <button class="mini-icon-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </li>
+                        <li class="history-item">
+                            <i class="fa-regular fa-message"></i>
+                            <span class="history-text">FastAPI Gateway Memory Optimization</span>
+                            <div class="history-actions">
+                                <button class="mini-icon-btn" title="Rename"><i class="fa-solid fa-pen"></i></button>
+                                <button class="mini-icon-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Sidebar Navigation Links -->
+            <div class="sidebar-nav-footer">
+                <a href="index.html" class="nav-link">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Hub Dashboard</span>
+                </a>
+                <a href="WebNovelReader.html" class="nav-link">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Batch Reader UI</span>
+                </a>
+                
+                <!-- System Status Widget -->
+                <div class="sidebar-status-card">
+                    <div class="status-card-header">
+                        <span class="status-indicator online"></span>
+                        <span class="status-title">LM Studio (Port 1234)</span>
+                    </div>
+                    <div class="status-model-name" id="currentModelBadge">Llama-3.2-3B-Instruct</div>
+                    <div class="vram-meter">
+                        <div class="vram-label"><span>8GB Unified RAM</span> <span>2.2 GB / 8.0 GB</span></div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: 27.5%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="chat-workspace">
+            <!-- Top Control Bar -->
+            <header class="chat-header">
+                <div class="header-left">
+                    <button class="icon-btn toggle-sidebar-btn" id="toggleSidebarBtn" title="Toggle Sidebar">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    
+                    <!-- Model Selector Dropdown -->
+                    <div class="model-selector-wrapper">
+                        <button class="model-select-btn" id="modelSelectBtn">
+                            <i class="fa-solid fa-microchip icon-accent"></i>
+                            <span id="selectedModelLabel">Llama-3.2-3B-Instruct (8GB Opt)</span>
+                            <i class="fa-solid fa-chevron-down arrow-icon"></i>
+                        </button>
+                        <div class="model-dropdown-menu" id="modelDropdownMenu">
+                            <div class="dropdown-header">8GB MAC MINI TUNED MODELS</div>
+                            <div class="model-option active" data-model="llama-3.2-3b">
+                                <div class="model-info">
+                                    <span class="model-name">Llama-3.2-3B-Instruct (Q4_K_M)</span>
+                                    <span class="model-desc">~2.2GB RAM footprint - Ultra fast narration polish</span>
+                                </div>
+                                <i class="fa-solid fa-check check-icon"></i>
+                            </div>
+                            <div class="model-option" data-model="qwen2.5-3b">
+                                <div class="model-info">
+                                    <span class="model-name">Qwen2.5-3B-Instruct</span>
+                                    <span class="model-desc">~2.1GB RAM footprint - Great multilingual text flow</span>
+                                </div>
+                                <i class="fa-solid fa-check check-icon"></i>
+                            </div>
+                            <div class="model-option" data-model="phi-3.5-mini">
+                                <div class="model-info">
+                                    <span class="model-name">Phi-3.5-mini-Instruct (3.8B)</span>
+                                    <span class="model-desc">~2.4GB RAM footprint - Strong reasoning & lore</span>
+                                </div>
+                                <i class="fa-solid fa-check check-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="header-right">
+                    <!-- Edge Tunnel Status -->
+                    <div class="status-pill edge-pill" title="Cloudflare Worker Gateway">
+                        <span class="dot pulse"></span>
+                        <span class="pill-text">Edge: dry-disk-4c9d</span>
+                    </div>
+
+                    <!-- TTS Engine Status -->
+                    <div class="status-pill tts-pill" id="ttsStatusPill" title="Kokoro TTS Pod Docker Container">
+                        <i class="fa-solid fa-waveform icon-tts"></i>
+                        <span class="pill-text">Kokoro (8880)</span>
+                    </div>
+
+                    <!-- Settings Drawer Toggle -->
+                    <button class="icon-btn" id="chatSettingsBtn" title="Inference Settings">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Chat Messages Display Area -->
+            <div class="chat-messages-container scrollable" id="chatMessagesContainer">
+                
+                <!-- Gemini / Claude Style Welcome Hero (Visible when conversation is empty) -->
+                <div class="welcome-hero" id="welcomeHero">
+                    <div class="hero-badge">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>GATE8 INTELLIGENCE ENGINE</span>
+                    </div>
+                    <h1 class="hero-title">Where text meets high-speed narration.</h1>
+                    <p class="hero-subtitle">Ask questions about your web novels, polish dialogue for audio synthesis, or generate full audiobooks via Kokoro TTS.</p>
+
+                    <!-- Prompt Suggestion Cards -->
+                    <div class="preset-cards-grid">
+                        <div class="preset-card" data-prompt="Polish the syntax and dialogue formatting of this text for natural audiobook narration: ">
+                            <div class="preset-icon"><i class="fa-solid fa-feather-pointed"></i></div>
+                            <div class="preset-content">
+                                <div class="preset-title">Polish Dialogue Syntax</div>
+                                <div class="preset-desc">Clean raw web novel text for optimal speech synthesis flow.</div>
+                            </div>
+                        </div>
+                        <div class="preset-card" data-prompt="Summarize the core narrative conflict and character motivations in this chapter: ">
+                            <div class="preset-icon"><i class="fa-solid fa-book-bookmark"></i></div>
+                            <div class="preset-content">
+                                <div class="preset-title">Analyze Chapter Arc</div>
+                                <div class="preset-desc">Extract key character motives, worldbuilding lore, and conflict.</div>
+                            </div>
+                        </div>
+                        <div class="preset-card" data-prompt="Re-write the following narrative scene in a dark fantasy noir style with dramatic pauses: ">
+                            <div class="preset-icon"><i class="fa-solid fa-masks-theater"></i></div>
+                            <div class="preset-content">
+                                <div class="preset-title">Creative Style Adaptor</div>
+                                <div class="preset-desc">Reframe narrative tone with expressive audio tags.</div>
+                            </div>
+                        </div>
+                        <div class="preset-card" data-prompt="Generate a detailed 3-part scene outline for the upcoming chapter: ">
+                            <div class="preset-icon"><i class="fa-solid fa-sitemap"></i></div>
+                            <div class="preset-content">
+                                <div class="preset-title">Chapter Outline Generation</div>
+                                <div class="preset-desc">Plan story progression, pacing beats, and dialogue hooks.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Message History Feed -->
+                <div class="messages-feed" id="messagesFeed">
+                    <!-- Sample User Message -->
+                    <div class="message-row user-row">
+                        <div class="avatar user-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="message-body">
+                            <div class="message-meta">
+                                <span class="sender-name">You</span>
+                                <span class="message-time">02:24 AM</span>
+                            </div>
+                            <div class="message-text">
+                                Please polish this web novel paragraph for audiobook speech synthesis. Ensure dialogue tags feel natural and add slight pacing breaks.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sample Assistant Message (Claude / Gemini style layout) -->
+                    <div class="message-row assistant-row">
+                        <div class="avatar ai-avatar">
+                            <i class="fa-solid fa-sparkles"></i>
+                        </div>
+                        <div class="message-body">
+                            <div class="message-meta">
+                                <span class="sender-name">Gate8 Core (Llama-3.1-8B)</span>
+                                <span class="message-time">02:24 AM</span>
+                            </div>
+                            <div class="message-text markdown-content">
+                                <p>Here is the polished text, optimized with natural rhythm and audio-friendly phrasing for the <strong>Kokoro TTS Engine</strong>:</p>
+                                
+                                <blockquote>
+                                    "The wind howled across the obsidian ruins... 'Hold your ground,' Ethan whispered, his hand tightening around the hilt. Beyond the mist, something ancient stirred."
+                                </blockquote>
+
+                                <h3>Key Improvements Made:</h3>
+                                <ul>
+                                    <li>Added slight pauses after descriptive clauses for natural breathing beats.</li>
+                                    <li>Refined dialogue tags to prevent repetitive vocal inflections during synthesis.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Audio Speech Controls Bar (Kokoro TTS Integration) -->
+                            <div class="audio-narration-bar">
+                                <button class="btn btn-secondary speak-btn" id="speakSampleBtn">
+                                    <i class="fa-solid fa-play"></i>
+                                    <span>Speak Response (Kokoro TTS)</span>
+                                </button>
+                                <div class="audio-waveform-visualizer hidden" id="waveformContainer">
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <div class="wave-bar"></div>
+                                    <span class="audio-duration">0:18 / 0:18</span>
+                                </div>
+                            </div>
+
+                            <!-- Message Action Toolbar -->
+                            <div class="message-actions-toolbar">
+                                <button class="action-btn" title="Copy Text"><i class="fa-regular fa-copy"></i></button>
+                                <button class="action-btn" title="Export WAV to R2"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+                                <button class="action-btn" title="Regenerate Response"><i class="fa-solid fa-arrows-rotate"></i></button>
+                                <button class="action-btn" title="Good Response"><i class="fa-regular fa-thumbs-up"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Floating Glassmorphism Input Area -->
+            <footer class="chat-input-area">
+                <div class="input-card-glass">
+                    <!-- Quick Toggle Toolbar Above Input -->
+                    <div class="input-tools-bar">
+                        <div class="tool-chips">
+                            <label class="toggle-chip">
+                                <input type="checkbox" id="autoTTSToggle" checked>
+                                <span class="chip-label"><i class="fa-solid fa-volume-high"></i> Auto-Speak TTS</span>
+                            </label>
+                            <label class="toggle-chip">
+                                <input type="checkbox" id="smartManagerToggle" checked>
+                                <span class="chip-label"><i class="fa-solid fa-memory"></i> VRAM Smart Pause</span>
+                            </label>
+                        </div>
+                        <div class="token-count-indicator">
+                            <span>Tokens: 0 / 4096</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Textarea & Actions -->
+                    <div class="input-row">
+                        <textarea class="chat-textarea" id="chatInput" placeholder="Message Gate8 Core or paste novel text... (Shift + Enter for new line)" rows="1"></textarea>
+                        
+                        <div class="input-actions-right">
+                            <!-- Voice Input / Mic Simulation -->
+                            <button class="input-action-btn mic-btn" id="micBtn" title="Voice Dictation">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+
+                            <!-- Attachment Button -->
+                            <button class="input-action-btn attach-btn" id="attachBtn" title="Attach Chapter Text / File">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+
+                            <!-- Send Button -->
+                            <button class="send-btn" id="sendBtn" title="Send Message">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Input Footer Disclaimer -->
+                    <div class="input-disclaimer">
+                        <span>Gate8 local tunnel processes data via Mac Mini Edge Gateway. TTS streams render with zero cloud latency.</span>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Modals & Drawers -->
+
+    <!-- Inference Settings Modal -->
+    <div class="modal-overlay hidden" id="settingsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-sliders"></i> Inference & Pipeline Settings</h3>
+                <button class="icon-btn close-modal-btn" id="closeSettingsBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label>LM Studio API Endpoint</label>
+                    <input type="text" class="form-input" value="http://localhost:1234/v1" readonly>
+                </div>
+                <div class="setting-group">
+                    <label>Kokoro TTS Container Endpoint</label>
+                    <input type="text" class="form-input" value="http://localhost:8880/v1/audio/speech" readonly>
+                </div>
+                <div class="setting-group">
+                    <div class="slider-label">
+                        <span>Temperature</span>
+                        <span id="tempValue">0.7</span>
+                    </div>
+                    <input type="range" min="0" max="1" step="0.05" value="0.7" id="tempSlider">
+                </div>
+                <div class="setting-group">
+                    <label>System Prompt Override</label>
+                    <textarea class="form-textarea" rows="3" placeholder="You are an expert AI editor and narrator for high-speed web novels...">You are Gate8 Core, an expert AI assistant specialized in web novel polishing, stylistic formatting, character analysis, and audio narration scripting.</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="resetSettingsBtn">Reset Defaults</button>
+                <button class="btn btn-primary" id="saveSettingsBtn">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html>
